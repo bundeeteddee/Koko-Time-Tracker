@@ -163,7 +163,8 @@ input { font-family: inherit; }
 .unt-none { font-size: 13px; color: #8a8272; }
 
 /* ---- settings ---- */
-.settings-table { border: 1px solid rgba(90,70,40,.14); border-radius: 13px; background: #faf6ee; overflow: hidden; }
+/* No overflow:hidden here — it would clip the absolutely-positioned merge menu. */
+.settings-table { border: 1px solid rgba(90,70,40,.14); border-radius: 13px; background: #faf6ee; }
 .st-row { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid rgba(90,70,40,.09); }
 .st-row:last-child { border-bottom: none; }
 .st-row .dot { width: 10px; height: 10px; border-radius: 99px; flex: none; }
