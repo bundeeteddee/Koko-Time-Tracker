@@ -81,7 +81,8 @@ input { font-family: inherit; }
   border: 1px solid rgba(90,70,40,.14); border-radius: 15px; padding: 17px;
   background: #faf6ee; display: flex; flex-direction: column; gap: 14px;
 }
-.log-row1 { display: flex; gap: 11px; align-items: center; flex-wrap: wrap; }
+.log-row1 { display: flex; gap: 11px; align-items: center; }
+.log-row1 .chips, .entry-edit .row .chips { flex: 1; min-width: 0; }
 .dur-input { width: 64px; font-weight: 600; text-align: center; }
 .desc-wrap { position: relative; }
 .desc-input { width: 100%; padding: 11px 12px; }
@@ -118,7 +119,7 @@ input { font-family: inherit; }
 .entry-row:hover .entry-acts { opacity: 1; }
 .entry-acts span { cursor: pointer; }
 .entry-edit { display: flex; flex-direction: column; gap: 10px; padding: 13px 0; }
-.entry-edit .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.entry-edit .row { display: flex; gap: 10px; align-items: center; }
 .entry-edit .dur-input { padding: 8px; font-size: 14px; border-radius: 8px; }
 .entry-edit .desc-input { padding: 10px 11px; font-size: 14px; border-radius: 8px; }
 .empty-state { padding: 26px 0; text-align: center; color: #b3a88f; font-size: 13.5px; border-top: 1px solid rgba(90,70,40,.1); }
