@@ -201,7 +201,12 @@ router.get('/status', (req, res) => {
       reminder_eod: settings.reminder_eod,
       sheet_id: settings.sheet_id,
     },
-    sync: { dirty: !!sync.dirty, last_success_at: sync.last_success_at, last_error: sync.last_error },
+    sync: {
+      dirty: !!sync.dirty,
+      last_success_at: sync.last_success_at,
+      last_error: sync.last_error,
+      service_email: require('./sheets-sync').serviceEmail(),
+    },
   });
 });
 
@@ -217,6 +222,20 @@ router.put('/settings', (req, res) => {
     setSetting(k, v);
   }
   res.json(getSettings());
+});
+
+// ---------- sync ----------
+
+router.post('/sync/now', async (req, res) => {
+  const result = await require('./sheets-sync').syncNow();
+  res.status(result.ok ? 200 : 400).json(result);
+});
+
+// ---------- dev ----------
+
+router.post('/dev/notify', (req, res) => {
+  require('./reminders').notify(req.body?.message || 'Test notification from TimeKeeping.');
+  res.json({ ok: true });
 });
 
 module.exports = router;

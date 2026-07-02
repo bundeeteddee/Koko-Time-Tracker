@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kienpang.timekeeping</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__PROJECT__/server.js</string>
+  </array>
+  <!-- No WorkingDirectory, and logs live in ~/Library/Logs: launchd cannot touch
+       TCC-protected folders like ~/Documents, and fails with EX_CONFIG if asked to. -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>__LOGS__/server.log</string>
+  <key>StandardErrorPath</key>
+  <string>__LOGS__/server-error.log</string>
+</dict>
+</plist>
