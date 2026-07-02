@@ -293,9 +293,13 @@ function renderAc() {
       ? `<div class="ac-create${S.acIndex === ad.items.length ? ' hl' : ''}" data-i="${ad.items.length}">
           <span class="plus">+</span>Create new tag <b>#${esc(ad.query)}</b></div>`
       : '');
-  for (const el of box.querySelectorAll('[data-i]')) {
-    el.onmousedown = (ev) => { ev.preventDefault(); acceptAc(Number(el.dataset.i)); };
-    el.onmouseenter = () => { S.acIndex = Number(el.dataset.i); renderAc(); };
+}
+
+// Highlight moves without rebuilding the dropdown: a rebuild under the cursor
+// destroys the node mid-click and the selection never lands.
+function updateAcHighlight() {
+  for (const el of $('ac').querySelectorAll('[data-i]')) {
+    el.classList.toggle('hl', Number(el.dataset.i) === S.acIndex);
   }
 }
 
@@ -332,6 +336,19 @@ function wireTodayForm() {
   $('next-day').onclick = async () => { S.formDate = addDays(S.formDate, 1); S.editingId = null; await loadDay(); renderToday(); };
   $('log-btn').onclick = submitEntry;
   $('f-duration').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitEntry(); } });
+  const acBox = $('ac');
+  acBox.addEventListener('mousedown', (e) => {
+    const item = e.target.closest('[data-i]');
+    if (!item) return;
+    e.preventDefault(); // keep focus in the input
+    acceptAc(Number(item.dataset.i));
+  });
+  acBox.addEventListener('mouseover', (e) => {
+    const item = e.target.closest('[data-i]');
+    if (!item) return;
+    S.acIndex = Number(item.dataset.i);
+    updateAcHighlight();
+  });
   const desc = $('f-desc');
   desc.addEventListener('input', () => { S.acOpen = true; S.acIndex = 0; renderAc(); });
   desc.addEventListener('focus', () => { S.acOpen = true; renderAc(); });
@@ -341,8 +358,8 @@ function wireTodayForm() {
     const open = S.acOpen && ad.active && (ad.items.length > 0 || ad.showCreate);
     if (open) {
       const total = ad.items.length + (ad.showCreate ? 1 : 0);
-      if (e.key === 'ArrowDown') { e.preventDefault(); S.acIndex = (S.acIndex + 1) % total; renderAc(); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); S.acIndex = (S.acIndex - 1 + total) % total; renderAc(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); S.acIndex = (S.acIndex + 1) % total; updateAcHighlight(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); S.acIndex = (S.acIndex - 1 + total) % total; updateAcHighlight(); return; }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); acceptAc(S.acIndex); return; }
       if (e.key === 'Escape') { S.acOpen = false; renderAc(); return; }
     }
