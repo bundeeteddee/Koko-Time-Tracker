@@ -98,6 +98,7 @@ input { font-family: inherit; }
   border-top: 1px solid rgba(90,70,40,.1); color: #8a5a2a; background: #fdfaf3;
 }
 .ac-create.hl { background: #faf3e8; }
+.ac-create .ac-note { color: #b3a88f; font-size: 11.5px; }
 .ac-create .plus {
   width: 17px; height: 17px; border-radius: 5px; background: #efe6d4; color: #8a5a2a;
   display: grid; place-items: center; font-size: 13px; line-height: 1;

@@ -291,7 +291,7 @@ function renderAc() {
     </div>`).join('') +
     (ad.showCreate
       ? `<div class="ac-create${S.acIndex === ad.items.length ? ' hl' : ''}" data-i="${ad.items.length}">
-          <span class="plus">+</span>Create new tag <b>#${esc(ad.query)}</b></div>`
+          <span class="plus">+</span>New tag <b>#${esc(ad.query)}</b>&nbsp;<span class="ac-note">· created when you log</span></div>`
       : '');
 }
 
