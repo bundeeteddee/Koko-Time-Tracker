@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  html,body{margin:0;background:#e9e6df;font-family:system-ui,-apple-system,sans-serif;color:#2d2822}
+  *{box-sizing:border-box}
+  input{font-family:inherit}
+  ::selection{background:#e5c9b6}
+  .tk-input:focus{border-color:#bf5b34 !important;box-shadow:0 0 0 3px rgba(191,91,52,.12)}
+  .tk-tab{cursor:pointer}
+  .tk-chip{cursor:pointer;user-select:none}
+  .tk-row:hover .tk-act{opacity:1 !important}
+  .tk-day:hover{background:#f6f0e6 !important}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:30px 20px 60px">
+  <div style="max-width:920px;margin:0 auto;background:#f4efe6;border:1px solid rgba(90,70,40,.14);border-radius:18px;box-shadow:0 2px 4px rgba(0,0,0,.04),0 18px 50px rgba(60,40,20,.10);overflow:hidden">
+
+    <!-- ===== HEADER / NAV ===== -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 26px;border-bottom:1px solid rgba(90,70,40,.12);background:#f7f2e9">
+      <div style="display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.01em">
+        <span style="width:11px;height:11px;border-radius:99px;background:#bf5b34;display:inline-block"></span>TimeKeeping
+      </div>
+      <nav style="display:flex;gap:3px;font-size:13.5px">
+        <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="4"><span class="tk-tab" onClick="{{ tab.onClick }}" style="{{ tab.style }}">{{ tab.label }}</span></sc-for>
+      </nav>
+    </div>
+
+    <!-- ===== TODAY ===== -->
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:26px 28px 30px;display:flex;flex-direction:column;gap:22px">
+
+      <!-- date + progress -->
+      <div>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:15px">
+          <span class="tk-chip" onClick="{{ onPrevDay }}" style="width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(90,70,40,.2);border-radius:8px;color:#8a8272;font-size:11px">◀</span>
+          <div style="font-size:15px;font-weight:600">{{ dateLabel }}</div>
+          <span class="tk-chip" onClick="{{ onNextDay }}" style="width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(90,70,40,.2);border-radius:8px;color:#8a8272;font-size:11px">▶</span>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Instrument Serif',serif;font-size:42px;line-height:.9;color:#2d2822">{{ prog.loggedLabel }} <span style="color:#b3a88f;font-size:26px">{{ prog.targetLabel }}</span></div>
+          <div style="font-size:12.5px;color:#9a8f79">{{ prog.remainLabel }}</div>
+        </div>
+        <div style="height:9px;border-radius:99px;background:#e5dac6;margin-top:14px;overflow:hidden">
+          <div style="width:{{ prog.pctCss }};height:100%;background:#bf5b34;border-radius:99px;transition:width .35s ease"></div>
+        </div>
+      </div>
+
+      <!-- quick-log form -->
+      <div style="border:1px solid rgba(90,70,40,.14);border-radius:15px;padding:17px;background:#faf6ee;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:11px;align-items:center;flex-wrap:wrap">
+          <input class="tk-input" value="{{ formDuration }}" onInput="{{ onDur }}" onKeyDown="{{ onDurKey }}" placeholder="2h" style="width:64px;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:9px;padding:10px;font-size:14.5px;font-weight:600;color:#2d2822;outline:none;text-align:center;transition:.15s">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ projChips }}" as="c" hint-placeholder-count="3"><span class="tk-chip" onClick="{{ c.onClick }}" style="{{ c.style }}"><span style="{{ c.dotStyle }}"></span>{{ c.name }}</span></sc-for>
+          </div>
+        </div>
+        <div style="position:relative">
+          <input class="tk-input" value="{{ formDesc }}" onInput="{{ onDesc }}" onKeyDown="{{ onDescKey }}" onFocus="{{ onDescFocus }}" onBlur="{{ onDescBlur }}" placeholder="What did you work on?  Type # to tag…" style="width:100%;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:9px;padding:11px 12px;font-size:14.5px;color:#2d2822;outline:none;transition:.15s">
+          <sc-if value="{{ ac.open }}">
+          <div style="position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;background:#fff;border:1px solid rgba(90,70,40,.18);border-radius:11px;box-shadow:0 12px 34px rgba(60,40,20,.16);overflow:hidden;font-size:13.5px">
+            <sc-for list="{{ ac.items }}" as="it" hint-placeholder-count="3"><div onMouseDown="{{ it.onClick }}" onMouseEnter="{{ it.onHover }}" style="{{ it.style }}"><span>#{{ it.name }}</span><span style="color:#b3a88f;font-size:11.5px">{{ it.countLabel }}</span></div></sc-for>
+            <sc-if value="{{ ac.showCreate }}"><div onMouseDown="{{ ac.onCreate }}" onMouseEnter="{{ ac.onCreateHover }}" style="{{ ac.createStyle }}"><span style="width:17px;height:17px;border-radius:5px;background:#efe6d4;color:#8a5a2a;display:grid;place-items:center;font-size:13px;line-height:1">+</span>Create new tag <b>#{{ ac.query }}</b></div></sc-if>
+          </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <span style="font-size:11.5px;color:#a39985">Recent:</span>
+          <sc-for list="{{ recentTags }}" as="rt" hint-placeholder-count="4"><span class="tk-chip" onClick="{{ rt.onClick }}" style="padding:4px 10px;border-radius:99px;background:#efe6d4;color:#8a5a2a;font-size:12px">#{{ rt.name }}</span></sc-for>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:1px">
+          <span style="font-size:11.5px;color:#a39985">Enter to log · project stays selected</span>
+          <span class="tk-chip" onClick="{{ onSubmit }}" style="padding:10px 20px;border-radius:10px;background:#2d2822;color:#f4efe6;font-size:13px;font-weight:600">Log</span>
+        </div>
+      </div>
+
+      <!-- entries -->
+      <div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985">{{ listTitle }}</span>
+          <span style="font-size:12px;color:#a39985">{{ listMeta }}</span>
+        </div>
+        <sc-if value="{{ todayEmpty }}"><div style="padding:26px 0;text-align:center;color:#b3a88f;font-size:13.5px;border-top:1px solid rgba(90,70,40,.1)">Nothing logged yet. Add your first entry above.</div></sc-if>
+        <sc-for list="{{ todayList }}" as="entry" hint-placeholder-count="3">
+          <div class="tk-row" style="border-top:1px solid rgba(90,70,40,.1)">
+            <sc-if value="{{ entry.viewing }}">
+              <div style="display:flex;gap:13px;padding:12px 0;align-items:baseline">
+                <span style="width:52px;flex:none;font-family:'Instrument Serif',serif;font-size:20px;color:#2d2822">{{ entry.durLabel }}</span>
+                <div style="flex:1;font-size:13.5px;line-height:1.5;color:#4a4338">
+                  <sc-if value="{{ entry.hasProject }}"><span style="display:inline-flex;align-items:center;gap:5px;margin-right:7px;color:#8a8272;font-size:12.5px"><span style="width:7px;height:7px;border-radius:99px;display:inline-block;background:{{ entry.projectColor }}"></span>{{ entry.projectName }} ·</span></sc-if>
+                  <sc-for list="{{ entry.segments }}" as="seg"><sc-if value="{{ seg.tag }}"><span style="background:#efe6d4;color:#8a5a2a;padding:1px 7px;border-radius:99px;font-size:12px">{{ seg.text }}</span></sc-if><sc-if value="{{ seg.plain }}">{{ seg.text }}</sc-if></sc-for>
+                </div>
+                <span class="tk-act" style="display:flex;gap:11px;color:#c3b7a2;font-size:12.5px;flex:none;opacity:0;transition:.15s">
+                  <span class="tk-chip" onClick="{{ entry.onEdit }}">✎</span><span class="tk-chip" onClick="{{ entry.onDelete }}">✕</span>
+                </span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ entry.editing }}">
+              <div style="display:flex;flex-direction:column;gap:10px;padding:13px 0">
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <input class="tk-input" value="{{ entry.editDur }}" onInput="{{ entry.onEditDur }}" style="width:64px;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:8px;font-size:14px;font-weight:600;text-align:center;outline:none">
+                  <div style="display:flex;gap:7px;flex-wrap:wrap"><sc-for list="{{ entry.editChips }}" as="c"><span class="tk-chip" onClick="{{ c.onClick }}" style="{{ c.style }}"><span style="{{ c.dotStyle }}"></span>{{ c.name }}</span></sc-for></div>
+                </div>
+                <input class="tk-input" value="{{ entry.editDesc }}" onInput="{{ entry.onEditDesc }}" style="width:100%;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:10px 11px;font-size:14px;outline:none">
+                <div style="display:flex;gap:9px">
+                  <span class="tk-chip" onClick="{{ entry.onSave }}" style="padding:8px 16px;border-radius:8px;background:#2d2822;color:#f4efe6;font-size:12.5px;font-weight:600">Save</span>
+                  <span class="tk-chip" onClick="{{ entry.onCancel }}" style="padding:8px 16px;border-radius:8px;background:#fff;border:1px solid rgba(90,70,40,.2);color:#5f574a;font-size:12.5px">Cancel</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+    </div>
+    </sc-if>
+
+    <!-- ===== WEEK ===== -->
+    <sc-if value="{{ isWeek }}">
+    <div style="padding:26px 28px 30px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:11px">
+          <span class="tk-chip" onClick="{{ onPrevWeek }}" style="width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(90,70,40,.2);border-radius:8px;color:#8a8272;font-size:11px">◀</span>
+          <div style="font-size:15px;font-weight:600">{{ weekLabel }}</div>
+          <span class="tk-chip" onClick="{{ onNextWeek }}" style="width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(90,70,40,.2);border-radius:8px;color:#8a8272;font-size:11px">▶</span>
+        </div>
+        <div style="font-size:13px;color:#8a8272">Week total <b style="font-family:'Instrument Serif',serif;font-size:22px;color:#2d2822;margin-left:6px">{{ weekTotalLabel }}</b></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <sc-for list="{{ weekDays }}" as="d" hint-placeholder-count="7">
+          <div class="tk-day" onClick="{{ d.onClick }}" style="{{ d.rowStyle }}">
+            <div style="width:96px;flex:none">
+              <div style="font-size:13.5px;font-weight:600;color:{{ d.nameColor }}">{{ d.dayName }}</div>
+              <div style="font-size:11.5px;color:#a39985">{{ d.dateLabel }}</div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="height:22px;background:#e9dfcd;border-radius:6px;overflow:hidden;position:relative">
+                <div style="width:{{ d.pctCss }};height:100%;background:{{ d.barColor }};border-radius:6px;transition:width .3s"></div>
+              </div>
+              <sc-if value="{{ d.hasEntries }}"><div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:x;font-size:12px;color:#8a8272;line-height:1.5">{{ d.summary }}</div></sc-if>
+            </div>
+            <div style="width:64px;flex:none;text-align:right;font-family:'Instrument Serif',serif;font-size:19px;color:{{ d.totalColor }}">{{ d.totalLabel }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:11.5px;color:#a39985">Click any day to backfill it in the Today form. Weekends have no 8h target.</div>
+    </div>
+    </sc-if>
+
+    <!-- ===== REPORTS ===== -->
+    <sc-if value="{{ isReports }}">
+    <div style="padding:24px 28px 32px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+        <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="6"><span class="tk-chip" onClick="{{ r.onClick }}" style="{{ r.style }}">{{ r.label }}</span></sc-for>
+      </div>
+      <sc-if value="{{ isCustom }}">
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#8a8272">
+          <input type="date" class="tk-input" value="{{ customStart }}" onInput="{{ onCustomStart }}" style="border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:7px 9px;outline:none;color:#2d2822">
+          <span>→</span>
+          <input type="date" class="tk-input" value="{{ customEnd }}" onInput="{{ onCustomEnd }}" style="border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:7px 9px;outline:none;color:#2d2822">
+        </div>
+      </sc-if>
+      <div style="font-size:13px;color:#8a8272">Showing <b style="color:#2d2822">{{ rangeLabel }}</b> · {{ rangeTotalLabel }} logged across {{ rangeDayCount }}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:14px;padding:16px;background:#faf6ee">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Time by project</div>
+          <div style="height:210px;position:relative"><canvas id="rp-project"></canvas></div>
+        </div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:14px;padding:16px;background:#faf6ee">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:4px">Time by tag</div>
+          <div style="font-size:11px;color:#b3a88f;margin-bottom:8px">Multi-tag entries count in each tag, so this can exceed the range total.</div>
+          <div style="height:186px;position:relative"><canvas id="rp-tag"></canvas></div>
+        </div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:14px;padding:16px;background:#faf6ee">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Tags within project</div>
+          <div style="height:210px;position:relative"><canvas id="rp-tagproj"></canvas></div>
+        </div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:14px;padding:16px;background:#faf6ee">
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Weekly trend · last 12 weeks</div>
+          <div style="height:210px;position:relative"><canvas id="rp-trend"></canvas></div>
+        </div>
+      </div>
+
+      <div style="border:1px solid rgba(90,70,40,.14);border-radius:14px;padding:17px 18px;background:#f8ede4">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a3855f">Untracked time</span>
+          <span style="font-size:13px;color:#a3855f">Total shortfall <b style="color:#8a4a26">{{ untracked.totalLabel }}</b></span>
+        </div>
+        <sc-if value="{{ untracked.none }}"><div style="font-size:13px;color:#8a8272">Every workday in range hit its target. Nice.</div></sc-if>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ untracked.rows }}" as="u" hint-placeholder-count="3"><div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:5px 0;border-top:1px solid rgba(163,133,95,.15)"><span style="color:#6b5f4d">{{ u.dateLabel }}</span><span style="color:#a3855f"><span style="color:#6b5f4d">{{ u.loggedLabel }} of 8h · </span>{{ u.shortfallLabel }} short</span></div></sc-for>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ===== SETTINGS ===== -->
+    <sc-if value="{{ isSettings }}">
+    <div style="padding:24px 28px 34px;display:flex;flex-direction:column;gap:26px">
+
+      <div>
+        <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Projects</div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:13px;background:#faf6ee;overflow:hidden">
+          <sc-for list="{{ projRows }}" as="p" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid rgba(90,70,40,.09)">
+              <span style="width:10px;height:10px;border-radius:99px;flex:none;background:{{ p.color }}"></span>
+              <sc-if value="{{ p.viewing }}"><div style="flex:1;font-size:14px;color:{{ p.nameColor }}">{{ p.name }} <sc-if value="{{ p.archived }}"><span style="font-size:11px;color:#b3a88f;margin-left:4px">archived</span></sc-if></div></sc-if>
+              <sc-if value="{{ p.editing }}"><input class="tk-input" value="{{ p.draft }}" onInput="{{ p.onDraft }}" style="flex:1;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:7px;padding:6px 9px;font-size:14px;outline:none"></sc-if>
+              <div style="display:flex;gap:8px;font-size:12px;color:#a3855f;flex:none">
+                <sc-if value="{{ p.viewing }}"><span class="tk-chip" onClick="{{ p.onEdit }}" style="color:#8a5a2a">rename</span><span class="tk-chip" onClick="{{ p.onArchive }}">{{ p.archiveLabel }}</span></sc-if>
+                <sc-if value="{{ p.editing }}"><span class="tk-chip" onClick="{{ p.onSave }}" style="color:#8a5a2a;font-weight:600">save</span><span class="tk-chip" onClick="{{ p.onCancel }}">cancel</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <div style="display:flex;gap:9px;padding:12px 15px">
+            <input class="tk-input" value="{{ newProject }}" onInput="{{ onNewProject }}" onKeyDown="{{ onNewProjectKey }}" placeholder="New project name…" style="flex:1;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:8px 10px;font-size:13.5px;outline:none">
+            <span class="tk-chip" onClick="{{ onAddProject }}" style="padding:8px 16px;border-radius:8px;background:#2d2822;color:#f4efe6;font-size:12.5px;font-weight:600">Add</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Tags</div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:13px;background:#faf6ee;overflow:hidden">
+          <sc-for list="{{ tagRows }}" as="t" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid rgba(90,70,40,.09)">
+              <sc-if value="{{ t.viewing }}"><span style="flex:1;font-size:13.5px;color:{{ t.nameColor }}"><span style="background:#efe6d4;color:#8a5a2a;padding:1px 8px;border-radius:99px;font-size:12.5px">#{{ t.name }}</span> <span style="color:#b3a88f;font-size:12px;margin-left:6px">{{ t.countLabel }}</span> <sc-if value="{{ t.archived }}"><span style="font-size:11px;color:#b3a88f">· archived</span></sc-if></span></sc-if>
+              <sc-if value="{{ t.editing }}"><input class="tk-input" value="{{ t.draft }}" onInput="{{ t.onDraft }}" style="flex:1;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:7px;padding:6px 9px;font-size:13.5px;outline:none"></sc-if>
+              <div style="display:flex;gap:9px;font-size:12px;color:#a3855f;flex:none;align-items:center">
+                <sc-if value="{{ t.viewing }}">
+                  <span class="tk-chip" onClick="{{ t.onEdit }}" style="color:#8a5a2a">rename</span>
+                  <span style="position:relative"><span class="tk-chip" onClick="{{ t.onToggleMerge }}">merge ▾</span>
+                    <sc-if value="{{ t.mergeOpen }}"><div style="position:absolute;right:0;top:calc(100% + 5px);z-index:15;background:#fff;border:1px solid rgba(90,70,40,.18);border-radius:9px;box-shadow:0 10px 26px rgba(60,40,20,.16);min-width:150px;overflow:hidden">
+                      <div style="padding:7px 11px;font-size:11px;color:#b3a88f;border-bottom:1px solid rgba(90,70,40,.09)">merge into…</div>
+                      <sc-for list="{{ t.mergeTargets }}" as="m"><div class="tk-chip" onClick="{{ m.onClick }}" style="padding:8px 11px;font-size:13px;color:#4a4338">#{{ m.name }}</div></sc-for>
+                    </div></sc-if>
+                  </span>
+                  <span class="tk-chip" onClick="{{ t.onArchive }}">{{ t.archiveLabel }}</span>
+                </sc-if>
+                <sc-if value="{{ t.editing }}"><span class="tk-chip" onClick="{{ t.onSave }}" style="color:#8a5a2a;font-weight:600">save</span><span class="tk-chip" onClick="{{ t.onCancel }}">cancel</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px">
+        <div>
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Daily target &amp; workdays</div>
+          <div style="border:1px solid rgba(90,70,40,.14);border-radius:13px;background:#faf6ee;padding:15px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#4a4338">Target <input class="tk-input" value="{{ targetHours }}" onInput="{{ onTarget }}" style="width:56px;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:7px;font-size:14px;font-weight:600;text-align:center;outline:none"> hours / workday</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ workdayChips }}" as="w" hint-placeholder-count="7"><span class="tk-chip" onClick="{{ w.onClick }}" style="{{ w.style }}">{{ w.label }}</span></sc-for></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Reminders</div>
+          <div style="border:1px solid rgba(90,70,40,.14);border-radius:13px;background:#faf6ee;padding:15px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:13.5px;color:#4a4338">macOS notifications</span>
+              <span class="tk-chip" onClick="{{ onToggleReminders }}" style="{{ reminderToggleStyle }}"><span style="{{ reminderKnobStyle }}"></span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:{{ reminderTextColor }}">Midday <input type="time" class="tk-input" value="{{ midday }}" onInput="{{ onMidday }}" style="border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:6px 8px;outline:none;color:#2d2822"></div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:{{ reminderTextColor }}">End of day <input type="time" class="tk-input" value="{{ endday }}" onInput="{{ onEndday }}" style="border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:6px 8px;outline:none;color:#2d2822"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#a39985;margin-bottom:12px">Google Sheets backup</div>
+        <div style="border:1px solid rgba(90,70,40,.14);border-radius:13px;background:#faf6ee;padding:15px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#4a4338">Sheet ID <input class="tk-input" value="{{ sheetId }}" onInput="{{ onSheetId }}" placeholder="1A2b3C…paste sheet ID" style="flex:1;border:1px solid rgba(90,70,40,.2);background:#fff;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#4a4338">Share the sheet with
+            <code style="flex:1;background:#f1e7d8;border:1px solid rgba(90,70,40,.15);border-radius:7px;padding:7px 10px;font-size:12px;color:#6b5f4d;font-family:ui-monospace,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ serviceEmail }}</code>
+            <span class="tk-chip" onClick="{{ onCopyEmail }}" style="padding:7px 13px;border-radius:8px;background:#fff;border:1px solid rgba(90,70,40,.2);color:#6b5f4d;font-size:12.5px;white-space:nowrap">{{ copyLabel }}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:2px">
+            <span style="font-size:12.5px;color:#8a8272">Last sync: <b style="color:#4a4338">{{ lastSync }}</b></span>
+            <span class="tk-chip" onClick="{{ onSyncNow }}" style="padding:9px 18px;border-radius:9px;background:#2d2822;color:#f4efe6;font-size:12.5px;font-weight:600">{{ syncLabel }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    </sc-if>
+
+  </div>
+  <div style="max-width:920px;margin:14px auto 0;text-align:center;font-size:11.5px;color:#a39985">localhost:4321 · personal · after-the-fact logging, no timer</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const TODAY='2026-07-02';
+    this.TODAY=TODAY;
+    this.serviceEmail='timekeeper@personal-tk.iam.gserviceaccount.com';
+    this.state={
+      view:'today',
+      projects:[
+        {id:'a',name:'Client A',color:'#bf5b34',archived:false},
+        {id:'b',name:'Client B',color:'#c9922e',archived:false},
+      ],
+      entries:this.seed(TODAY),
+      archivedTags:[],
+      target:480,
+      workdays:[1,2,3,4,5],
+      reminders:{enabled:true,midday:'12:30',endday:'17:30'},
+      formDate:TODAY, formProject:'a', formDuration:'', formDesc:'',
+      ac:{open:false,index:0}, descFocused:false,
+      editingId:null, edit:{duration:'',projectId:null,description:''},
+      weekAnchor:TODAY,
+      reportRange:'this-week', customStart:this.addDays(TODAY,-30), customEnd:TODAY,
+      editingProject:null, projDraft:'', newProject:'',
+      editingTag:null, tagDraft:'', mergeOpen:null,
+      sheetId:'', lastSync:'4 minutes ago', copied:false, syncing:false,
+    };
+    this.charts={}; this._sig=''; this._drawn=false; this._nid=1000;
+  }
+  // ---------- date utils ----------
+  addDays(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return this.iso(d);}
+  iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  dow(iso){return new Date(iso+'T00:00:00').getDay();}
+  startOfWeek(iso){const d=new Date(iso+'T00:00:00');const off=(d.getDay()+6)%7;d.setDate(d.getDate()-off);return this.iso(d);}
+  fmtDate(iso,opts){return new Date(iso+'T00:00:00').toLocaleDateString('en-US',opts||{weekday:'short',month:'short',day:'numeric'});}
+  // ---------- duration ----------
+  parseDur(s){s=(s||'').trim().toLowerCase();if(!s)return 0;let m;
+    if(m=s.match(/^(\d+):(\d{1,2})$/))return (+m[1])*60+(+m[2]);
+    if(m=s.match(/^(\d+)h(\d{1,2})$/))return (+m[1])*60+(+m[2]);
+    if(m=s.match(/^(\d*\.\d+)\s*h?$/))return Math.round(parseFloat(m[1])*60);
+    let mins=0,ok=false,re=/(\d+)\s*(h|m)/g,r;while(r=re.exec(s)){ok=true;mins+=r[2]==='h'?(+r[1])*60:(+r[1]);}
+    if(ok)return mins; if(m=s.match(/^(\d+)$/))return +m[1]; return 0;}
+  fmtDur(mins){const h=Math.floor(mins/60),m=mins%60;if(h&&m)return h+'h'+String(m).padStart(2,'0');if(h)return h+'h';return m+'m';}
+  fmtH(mins){return (Math.round(mins/60*10)/10)+'h';}
+  // ---------- tags ----------
+  tagsIn(desc){const out=[],re=/#([a-z0-9\-]+)/gi;let m;while(m=re.exec(desc))out.push(m[1].toLowerCase());return out;}
+  segmentize(desc){const parts=[],re=/#[a-z0-9\-]+/gi;let last=0,m;while(m=re.exec(desc)){if(m.index>last)parts.push({text:desc.slice(last,m.index),tag:false,plain:true});parts.push({text:m[0],tag:true,plain:false});last=m.index+m[0].length;}if(last<desc.length)parts.push({text:desc.slice(last),tag:false,plain:true});if(!parts.length)parts.push({text:desc,tag:false,plain:true});return parts;}
+  tagStats(){const map={};this.state.entries.forEach(e=>{[...new Set(this.tagsIn(e.description))].forEach(n=>{if(!map[n])map[n]={name:n,count:0,last:''};map[n].count++;if(e.date>map[n].last)map[n].last=e.date;});});return Object.values(map);}
+  // ---------- seed ----------
+  seed(TODAY){let s=987654;const R=()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};
+    const T=[{p:'a',d:'refactor the billing table #frontend'},{p:'a',d:'code review + PR feedback #frontend'},{p:'a',d:'debugging the sync webhook #backend'},{p:'a',d:'infra migration notes #backend'},{p:'b',d:'wire up webhook retries #api'},{p:'b',d:'sprint planning #peoplemgmt'},{p:'b',d:'client sync call #peoplemgmt'},{p:null,d:'1:1 with Sam #peoplemgmt'},{p:null,d:'reading up on async #learning #rust'},{p:null,d:'exploring vector DBs #exploration #learning'},{p:null,d:'team retro #peoplemgmt'},{p:null,d:'interview + debrief #peoplemgmt #hiring'}];
+    const out=[];let id=1;
+    for(let back=0;back<20;back++){const dt=this.addDays(TODAY,-back),wd=this.dow(dt);
+      if(back===0){[[120,'a','refactor the billing table #frontend'],[90,'b','wire up webhook retries #api'],[60,null,'1:1 with Sam #peoplemgmt'],[60,null,'reading up on async #learning #rust']].forEach(c=>out.push({id:id++,date:dt,minutes:c[0],projectId:c[1],description:c[2]}));continue;}
+      if(wd===0||wd===6){if(R()>0.72){out.push({id:id++,date:dt,minutes:[60,90][Math.floor(R()*2)],projectId:null,description:['reading up on async #learning #rust','weekend side spike #exploration'][Math.floor(R()*2)]});}continue;}
+      const n=2+Math.floor(R()*3);for(let i=0;i<n;i++){const t=T[Math.floor(R()*T.length)];out.push({id:id++,date:dt,minutes:[30,45,60,90,120][Math.floor(R()*5)],projectId:t.p,description:t.d});}}
+    return out;}
+  // ---------- form helpers ----------
+  projChipsFor(selId,onPick){const last={};this.state.entries.forEach(e=>{if(e.projectId&&(!last[e.projectId]||e.date>last[e.projectId]))last[e.projectId]=e.date;});
+    const act=this.state.projects.filter(p=>!p.archived).slice().sort((a,b)=>(last[b.id]||'').localeCompare(last[a.id]||''));
+    const chip=(id,name,color,sel,onClick)=>({id,name,onClick,
+      style:'display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:99px;font-size:12.5px;font-weight:'+(sel?'600':'500')+';'+(sel?'background:'+ (id==='none'?'#8a8272':color) +';color:#fff;border:1px solid transparent':'background:#fff;color:#5f574a;border:1px solid rgba(90,70,40,.2)'),
+      dotStyle:'width:6px;height:6px;border-radius:99px;display:inline-block;background:'+(sel?'rgba(255,255,255,.85)':(id==='none'?'#b8ab95':color))});
+    const chips=act.map(p=>chip(p.id,p.name,p.color,selId===p.id,()=>onPick(p.id)));
+    chips.push(chip('none','No project','#8a8272',selId===null,()=>onPick(null)));
+    return chips;}
+  acData(){const desc=this.state.formDesc;const m=desc.match(/#([a-z0-9\-]*)$/i);
+    if(!m)return{active:false,query:'',items:[],showCreate:false};
+    const q=m[1].toLowerCase();const arch=new Set(this.state.archivedTags);
+    let items=this.tagStats().filter(t=>!arch.has(t.name)&&t.name.includes(q));
+    items.sort((a,b)=>b.count-a.count||b.last.localeCompare(a.last));items=items.slice(0,5);
+    const exact=this.tagStats().some(t=>t.name===q);
+    return{active:true,query:q,items,showCreate:q.length>0&&!exact};}
+  submit(){const mins=this.parseDur(this.state.formDuration);if(mins<=0)return;
+    const e={id:this._nid++,date:this.state.formDate,minutes:mins,projectId:this.state.formProject,description:this.state.formDesc.trim()};
+    this.setState(s=>({entries:[e,...s.entries],formDuration:'',formDesc:'',ac:{open:false,index:0}}));}
+  acceptAc(i){const ad=this.acData();if(!ad.active)return;let name=(i<ad.items.length)?ad.items[i].name:ad.query;
+    const desc=this.state.formDesc.replace(/#([a-z0-9\-]*)$/i,'#'+name+' ');
+    this.setState({formDesc:desc,ac:{open:false,index:0}});}
+  // ---------- reports ----------
+  rangeDates(){const T=this.TODAY,mon=this.startOfWeek(T),d=new Date(T+'T00:00:00');
+    switch(this.state.reportRange){
+      case 'this-week':return{start:mon,end:this.addDays(mon,6)};
+      case 'last-week':return{start:this.addDays(mon,-7),end:this.addDays(mon,-1)};
+      case 'this-month':return{start:this.iso(new Date(d.getFullYear(),d.getMonth(),1)),end:this.iso(new Date(d.getFullYear(),d.getMonth()+1,0))};
+      case 'last-month':return{start:this.iso(new Date(d.getFullYear(),d.getMonth()-1,1)),end:this.iso(new Date(d.getFullYear(),d.getMonth(),0))};
+      case 'last-12-weeks':return{start:this.addDays(mon,-77),end:this.addDays(mon,6)};
+      case 'custom':return{start:this.state.customStart,end:this.state.customEnd};
+      default:return{start:mon,end:this.addDays(mon,6)};}}
+  componentDidMount(){this._chartWait();}
+  componentDidUpdate(){this.maybeDraw();}
+  _chartWait(){if(window.Chart){this.maybeDraw();return;}const t=setInterval(()=>{if(window.Chart){clearInterval(t);this.maybeDraw();}},80);}
+  maybeDraw(){if(!window.Chart)return;if(this.state.view!=='reports'){this._drawn=false;return;}
+    const sig=[this.state.reportRange,this.state.customStart,this.state.customEnd,this.state.entries.length,this.state.projects.length].join('|');
+    if(this._drawn&&sig===this._sig)return;this._sig=sig;this._drawn=true;setTimeout(()=>this.drawReports(),0);}
+  drawReports(){if(!window.Chart)return;const {start,end}=this.rangeDates();this._drawReportsInner(start,end);}
+  _drawReportsInner(start,end){const C=window.Chart;
+    const ents=this.state.entries.filter(e=>e.date>=start&&e.date<=end);const P=this.state.projects;
+    const warm=['#bf5b34','#c9922e','#7d8c4a','#a86b8a','#6a7ba8','#9c6b4a','#c77d52','#b0895a'];
+    Object.values(this.charts).forEach(c=>{try{c.destroy();}catch(e){}});this.charts={};
+    C.defaults.font.family='system-ui, sans-serif';C.defaults.color='#8a8272';
+    const mk=(id,cfg)=>{const el=document.getElementById(id);if(el)this.charts[id]=new C(el,cfg);};
+    // project doughnut
+    const pm={};ents.forEach(e=>{const k=e.projectId||'none';pm[k]=(pm[k]||0)+e.minutes;});
+    const pl=[],pd=[],pc=[];P.forEach(p=>{if(pm[p.id]){pl.push(p.name);pd.push(+(pm[p.id]/60).toFixed(2));pc.push(p.color);}});
+    if(pm['none']){pl.push('No project');pd.push(+(pm['none']/60).toFixed(2));pc.push('#b8ab95');}
+    mk('rp-project',{type:'doughnut',data:{labels:pl,datasets:[{data:pd,backgroundColor:pc,borderColor:'#faf6ee',borderWidth:2}]},options:{maintainAspectRatio:false,cutout:'60%',animation:false,plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:12}}},tooltip:{callbacks:{label:c=>' '+c.label+': '+c.parsed+'h'}}}}});
+    // tag bar
+    const tm={};let unt=0;ents.forEach(e=>{const t=[...new Set(this.tagsIn(e.description))];if(!t.length)unt+=e.minutes;else t.forEach(n=>tm[n]=(tm[n]||0)+e.minutes);});
+    let ta=Object.entries(tm).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+    const tl=ta.map(t=>'#'+t.k),td=ta.map(t=>+(t.v/60).toFixed(2));if(unt>0){tl.push('untagged');td.push(+(unt/60).toFixed(2));}
+    mk('rp-tag',{type:'bar',data:{labels:tl,datasets:[{data:td,backgroundColor:tl.map((l,i)=>l==='untagged'?'#c7bca6':warm[i%warm.length]),borderRadius:4}]},options:{maintainAspectRatio:false,indexAxis:'y',animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.x+'h'}}},scales:{x:{grid:{color:'#e5dac6'},ticks:{callback:v=>v+'h',font:{size:11}}},y:{grid:{display:false},ticks:{font:{size:12}}}}}});
+    // tag within project stacked
+    const top=ta.slice(0,5).map(t=>t.k);const cats=[...P.map(p=>p.id),'none'];const clab=[...P.map(p=>p.name),'No project'];
+    const ds=top.map((tag,i)=>({label:'#'+tag,backgroundColor:warm[i%warm.length],borderRadius:3,data:cats.map(cid=>{let sm=0;ents.forEach(e=>{if((e.projectId||'none')===cid&&this.tagsIn(e.description).includes(tag))sm+=e.minutes;});return +(sm/60).toFixed(2);})}));
+    mk('rp-tagproj',{type:'bar',data:{labels:clab,datasets:ds},options:{maintainAspectRatio:false,indexAxis:'y',animation:false,plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10.5},padding:8}}},scales:{x:{stacked:true,grid:{color:'#e5dac6'},ticks:{callback:v=>v+'h',font:{size:11}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:12}}}}}});
+    // trend
+    const wk=[],mon=this.startOfWeek(this.TODAY);for(let i=11;i>=0;i--){const ws=this.addDays(mon,-7*i),we=this.addDays(ws,6);let sm=0;this.state.entries.forEach(e=>{if(e.date>=ws&&e.date<=we)sm+=e.minutes;});wk.push({l:this.fmtDate(ws,{month:'short',day:'numeric'}),v:+(sm/60).toFixed(1)});}
+    mk('rp-trend',{type:'line',data:{labels:wk.map(w=>w.l),datasets:[{data:wk.map(w=>w.v),borderColor:'#bf5b34',backgroundColor:'rgba(191,91,52,.13)',fill:true,tension:.32,pointRadius:2.5,pointBackgroundColor:'#bf5b34'}]},options:{maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.y+'h'}}},scales:{y:{grid:{color:'#e5dac6'},ticks:{callback:v=>v+'h',font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:6}}}}});}
+  // ---------- render ----------
+  renderVals(){
+    const S=this.state;const set=(o)=>this.setState(o);
+    const tab=(k,label)=>({label,onClick:()=>{this.setState({view:k});},style:'padding:6px 13px;border-radius:9px;'+(S.view===k?'background:#e8dcc7;color:#8a4a26;font-weight:600':'color:#8a8272')});
+    const tabs=[tab('today','Today'),tab('week','Week'),tab('reports','Reports'),tab('settings','Settings')];
+
+    // ----- TODAY -----
+    const fd=S.formDate;const isTargetDay=S.workdays.includes(this.dow(fd));
+    const dayEntries=S.entries.filter(e=>e.date===fd);
+    const logged=dayEntries.reduce((a,e)=>a+e.minutes,0);
+    const isToday=S.view==='today',isWeek=S.view==='week',isReports=S.view==='reports',isSettings=S.view==='settings';
+    const dateLabel=(fd===this.TODAY?'Today':this.fmtDate(fd,{weekday:'long'}))+' · '+this.fmtDate(fd,{month:'short',day:'numeric'});
+    const pct=isTargetDay?Math.min(100,logged/S.target*100):(logged>0?100:0);
+    const prog={loggedLabel:this.fmtH(logged),targetLabel:isTargetDay?('/ '+this.fmtH(S.target)):'logged',
+      pctCss:pct+'%',remainLabel:!isTargetDay?'no target today':(logged>=S.target?'target reached':this.fmtH(S.target-logged)+' to target')};
+    const projChips=this.projChipsFor(S.formProject,(id)=>set({formProject:id}));
+    const ad=this.acData();const acItems=ad.items.map((t,i)=>({name:t.name,countLabel:t.count+(t.count===1?' use':' uses'),
+      onClick:()=>this.acceptAc(i),onHover:()=>set({ac:{...S.ac,index:i}}),
+      style:'display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer;'+(S.ac.index===i?'background:#f6efe2':'')}));
+    const ac={open:S.ac.open&&ad.active&&(ad.items.length>0||ad.showCreate),items:acItems,showCreate:ad.showCreate,query:ad.query,
+      onCreate:()=>this.acceptAc(ad.items.length),onCreateHover:()=>set({ac:{...S.ac,index:ad.items.length}}),
+      createStyle:'display:flex;align-items:center;gap:8px;padding:10px 13px;cursor:pointer;border-top:1px solid rgba(90,70,40,.1);color:#8a5a2a;'+(S.ac.index===ad.items.length?'background:#faf3e8':'background:#fdfaf3')};
+    const recentTags=this.tagStats().filter(t=>!S.archivedTags.includes(t.name)).sort((a,b)=>b.count-a.count||b.last.localeCompare(a.last)).slice(0,5)
+      .map(t=>({name:t.name,onClick:()=>{const d=S.formDesc;const nd=(d&&!d.endsWith(' ')?d+' ':d)+'#'+t.name+' ';set({formDesc:nd});}}));
+    const onDescKey=(e)=>{const open=S.ac.open&&this.acData().active;
+      if(open){const adx=this.acData();const total=adx.items.length+(adx.showCreate?1:0);
+        if(e.key==='ArrowDown'){e.preventDefault();set({ac:{...S.ac,index:(S.ac.index+1)%total}});return;}
+        if(e.key==='ArrowUp'){e.preventDefault();set({ac:{...S.ac,index:(S.ac.index-1+total)%total}});return;}
+        if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();this.acceptAc(S.ac.index);return;}
+        if(e.key==='Escape'){set({ac:{open:false,index:0}});return;}}
+      if(e.key==='Enter'){e.preventDefault();this.submit();}};
+    const onDesc=(e)=>{const v=e.target.value;set({formDesc:v,ac:{open:true,index:0}});};
+    const todayList=dayEntries.map(en=>{const editing=S.editingId===en.id;const proj=S.projects.find(p=>p.id===en.projectId);
+      const base={id:en.id,viewing:!editing,editing,durLabel:this.fmtDur(en.minutes),
+        hasProject:!!proj,projectName:proj?proj.name:'',projectColor:proj?proj.color:'#8a8272',segments:this.segmentize(en.description),
+        onEdit:()=>set({editingId:en.id,edit:{duration:this.fmtDur(en.minutes),projectId:en.projectId,description:en.description}}),
+        onDelete:()=>set(s=>({entries:s.entries.filter(x=>x.id!==en.id)}))};
+      if(editing){base.editDur=S.edit.duration;base.editDesc=S.edit.description;
+        base.onEditDur=(e)=>set({edit:{...S.edit,duration:e.target.value}});
+        base.onEditDesc=(e)=>set({edit:{...S.edit,description:e.target.value}});
+        base.editChips=this.projChipsFor(S.edit.projectId,(id)=>set({edit:{...S.edit,projectId:id}}));
+        base.onSave=()=>{const m=this.parseDur(S.edit.duration);if(m<=0)return;set(s=>({editingId:null,entries:s.entries.map(x=>x.id===en.id?{...x,minutes:m,projectId:s.edit.projectId,description:s.edit.description.trim()}:x)}));};
+        base.onCancel=()=>set({editingId:null});}
+      return base;});
+
+    // ----- WEEK -----
+    const wStart=this.startOfWeek(S.weekAnchor);
+    const wDaysArr=Array.from({length:7},(_,i)=>this.addDays(wStart,i));
+    const weekTotal=wDaysArr.reduce((a,ds)=>a+S.entries.filter(e=>e.date===ds).reduce((b,e)=>b+e.minutes,0),0);
+    const weekDays=wDaysArr.map(ds=>{const es=S.entries.filter(e=>e.date===ds);const tot=es.reduce((a,e)=>a+e.minutes,0);
+      const wknd=this.dow(ds)===0||this.dow(ds)===6;const tgt=S.workdays.includes(this.dow(ds));
+      const p=tgt?Math.min(100,tot/S.target*100):(tot>0?100:0);const isTod=ds===this.TODAY;
+      const summary=es.map(e=>{const pr=S.projects.find(x=>x.id===e.projectId);return this.fmtDur(e.minutes)+' '+(pr?pr.name:this.tagsIn(e.description)[0]?'#'+this.tagsIn(e.description)[0]:'—');}).join('   ·   ');
+      return{key:ds,dayName:this.fmtDate(ds,{weekday:'long'}),dateLabel:this.fmtDate(ds,{month:'short',day:'numeric'}),
+        totalLabel:tot>0?this.fmtH(tot):'—',totalColor:tot>0?'#2d2822':'#c3b7a2',nameColor:isTod?'#8a4a26':'#2d2822',
+        hasEntries:es.length>0,summary:summary||'',pctCss:p+'%',barColor:wknd?'#b8ab95':(tot>=S.target?'#7d8c4a':'#bf5b34'),
+        hasTarget:tgt,isToday:isTod,isWeekend:wknd,
+        rowStyle:'display:flex;align-items:center;gap:14px;padding:11px 13px;border-radius:11px;cursor:pointer;transition:.12s;'+(isTod?'background:#f4ecdd;border:1px solid rgba(138,74,38,.18)':'border:1px solid transparent'),
+        onClick:()=>set({view:'today',formDate:ds})};});
+
+    // ----- REPORTS -----
+    const rlabels={'this-week':'This week','last-week':'Last week','this-month':'This month','last-month':'Last month','last-12-weeks':'Last 12 weeks','custom':'Custom'};
+    const ranges=Object.keys(rlabels).map(k=>({key:k,label:rlabels[k],onClick:()=>set({reportRange:k}),
+      style:'padding:6px 13px;border-radius:99px;font-size:12.5px;cursor:pointer;'+(S.reportRange===k?'background:#2d2822;color:#f4efe6;font-weight:600':'background:#fff;border:1px solid rgba(90,70,40,.2);color:#5f574a')}));
+    const rd=this.rangeDates();const rents=S.entries.filter(e=>e.date>=rd.start&&e.date<=rd.end);
+    const rTotal=rents.reduce((a,e)=>a+e.minutes,0);
+    const rDayCount=new Set(rents.map(e=>e.date)).size;
+    const untRows=[];let short=0;let cur=rd.start;let guard=0;
+    while(cur<=rd.end&&guard<400){guard++;if(S.workdays.includes(this.dow(cur))&&cur<=this.TODAY){const t=S.entries.filter(e=>e.date===cur).reduce((a,e)=>a+e.minutes,0);if(t<S.target){short+=(S.target-t);untRows.push({dateLabel:this.fmtDate(cur,{weekday:'short',month:'short',day:'numeric'}),loggedLabel:this.fmtH(t),shortfallLabel:this.fmtH(S.target-t)});}}cur=this.addDays(cur,1);}
+    const untracked={rows:untRows,none:untRows.length===0,totalLabel:this.fmtH(short)};
+
+    // ----- SETTINGS -----
+    const projRows=S.projects.map(p=>{const editing=S.editingProject===p.id;
+      return{id:p.id,name:p.name,color:p.color,archived:p.archived,viewing:!editing,editing,draft:S.projDraft,
+        nameColor:p.archived?'#b3a88f':'#2d2822',archiveLabel:p.archived?'unarchive':'archive',
+        onEdit:()=>set({editingProject:p.id,projDraft:p.name}),onDraft:(e)=>set({projDraft:e.target.value}),
+        onSave:()=>{const v=S.projDraft.trim();if(!v)return;set(s=>({editingProject:null,projects:s.projects.map(x=>x.id===p.id?{...x,name:v}:x)}));},
+        onCancel:()=>set({editingProject:null}),
+        onArchive:()=>set(s=>({projects:s.projects.map(x=>x.id===p.id?{...x,archived:!x.archived}:x)}))};});
+    const addProject=()=>{const v=S.newProject.trim();if(!v)return;const palette=['#7d8c4a','#a86b8a','#6a7ba8','#9c6b4a','#c9922e','#bf5b34'];const color=palette[S.projects.length%palette.length];set(s=>({projects:[...s.projects,{id:'p'+this._nid++,name:v,color,archived:false}],newProject:''}));};
+    const allTags=this.tagStats().sort((a,b)=>b.count-a.count);
+    const renameTag=(oldN,newN)=>{newN=newN.trim().replace(/^#/,'').toLowerCase();if(!newN||newN===oldN)return set({editingTag:null});
+      set(s=>({editingTag:null,entries:s.entries.map(e=>({...e,description:e.description.replace(new RegExp('#'+oldN+'\\b','gi'),'#'+newN)}))}));};
+    const mergeTag=(fromN,intoN)=>{set(s=>({mergeOpen:null,entries:s.entries.map(e=>{let d=e.description.replace(new RegExp('#'+fromN+'\\b','gi'),'#'+intoN);return{...e,description:d};})}));};
+    const tagRows=allTags.map(t=>{const editing=S.editingTag===t.name;const archived=S.archivedTags.includes(t.name);
+      return{name:t.name,countLabel:t.count+(t.count===1?' use':' uses'),archived,viewing:!editing,editing,draft:S.tagDraft,
+        nameColor:archived?'#b3a88f':'#2d2822',archiveLabel:archived?'unarchive':'archive',mergeOpen:S.mergeOpen===t.name,
+        mergeTargets:allTags.filter(x=>x.name!==t.name).map(x=>({name:x.name,onClick:()=>mergeTag(t.name,x.name)})),
+        onEdit:()=>set({editingTag:t.name,tagDraft:t.name}),onDraft:(e)=>set({tagDraft:e.target.value}),
+        onSave:()=>renameTag(t.name,S.tagDraft),onCancel:()=>set({editingTag:null}),
+        onToggleMerge:()=>set({mergeOpen:S.mergeOpen===t.name?null:t.name}),
+        onArchive:()=>set(s=>({archivedTags:archived?s.archivedTags.filter(x=>x!==t.name):[...s.archivedTags,t.name]}))};});
+    const workdayChips=[[1,'Mon'],[2,'Tue'],[3,'Wed'],[4,'Thu'],[5,'Fri'],[6,'Sat'],[0,'Sun']].map(([n,label])=>{const on=S.workdays.includes(n);
+      return{label,onClick:()=>set(s=>({workdays:on?s.workdays.filter(x=>x!==n):[...s.workdays,n]})),
+        style:'padding:6px 12px;border-radius:8px;font-size:12.5px;cursor:pointer;'+(on?'background:#bf5b34;color:#fff;font-weight:600':'background:#fff;border:1px solid rgba(90,70,40,.2);color:#8a8272')};});
+    const rem=S.reminders;
+    const copyEmail=()=>{try{navigator.clipboard.writeText(this.serviceEmail);}catch(e){}set({copied:true});setTimeout(()=>this.setState({copied:false}),1600);};
+    const syncNow=()=>{set({syncing:true});setTimeout(()=>this.setState({syncing:false,lastSync:'just now'}),900);};
+
+    if(isReports){this.maybeDraw();}else{this._drawn=false;}
+
+    return {
+      tabs,isToday,isWeek,isReports,isSettings,
+      // today
+      dateLabel,onPrevDay:()=>set({formDate:this.addDays(fd,-1),editingId:null}),onNextDay:()=>set({formDate:this.addDays(fd,1),editingId:null}),
+      prog,formDuration:S.formDuration,onDur:(e)=>set({formDuration:e.target.value}),onDurKey:(e)=>{if(e.key==='Enter'){e.preventDefault();this.submit();}},
+      projChips,formDesc:S.formDesc,onDesc,onDescKey,onDescFocus:()=>set({ac:{...S.ac,open:true}}),onDescBlur:()=>setTimeout(()=>this.setState({ac:{...this.state.ac,open:false}}),120),
+      ac,recentTags,onSubmit:()=>this.submit(),
+      listTitle:fd===this.TODAY?'Today':this.fmtDate(fd,{weekday:'long',month:'short',day:'numeric'}),
+      listMeta:dayEntries.length+' '+(dayEntries.length===1?'entry':'entries')+' · '+this.fmtH(logged),
+      todayEmpty:dayEntries.length===0,todayList,
+      // week
+      weekLabel:this.fmtDate(wStart,{month:'short',day:'numeric'})+' – '+this.fmtDate(this.addDays(wStart,6),{month:'short',day:'numeric'}),
+      onPrevWeek:()=>set({weekAnchor:this.addDays(wStart,-7)}),onNextWeek:()=>set({weekAnchor:this.addDays(wStart,7)}),
+      weekDays,weekTotalLabel:this.fmtH(weekTotal),
+      // reports
+      ranges,isCustom:S.reportRange==='custom',customStart:S.customStart,customEnd:S.customEnd,
+      onCustomStart:(e)=>set({customStart:e.target.value}),onCustomEnd:(e)=>set({customEnd:e.target.value}),
+      rangeLabel:this.fmtDate(rd.start,{month:'short',day:'numeric'})+' – '+this.fmtDate(rd.end,{month:'short',day:'numeric'}),
+      rangeTotalLabel:this.fmtH(rTotal),rangeDayCount:rDayCount+(rDayCount===1?' day':' days'),untracked,
+      // settings
+      projRows,newProject:S.newProject,onNewProject:(e)=>set({newProject:e.target.value}),onNewProjectKey:(e)=>{if(e.key==='Enter')addProject();},onAddProject:addProject,
+      tagRows,targetHours:(S.target/60).toString(),onTarget:(e)=>{const h=parseFloat(e.target.value);set({target:isNaN(h)?S.target:Math.round(h*60)});},
+      workdayChips,
+      onToggleReminders:()=>set({reminders:{...rem,enabled:!rem.enabled}}),
+      reminderToggleStyle:'width:42px;height:24px;border-radius:99px;position:relative;transition:.2s;display:inline-block;background:'+(rem.enabled?'#bf5b34':'#d8ccb8'),
+      reminderKnobStyle:'position:absolute;top:3px;left:'+(rem.enabled?'21px':'3px')+';width:18px;height:18px;border-radius:99px;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)',
+      reminderTextColor:rem.enabled?'#4a4338':'#c3b7a2',midday:rem.midday,endday:rem.endday,
+      onMidday:(e)=>set({reminders:{...rem,midday:e.target.value}}),onEndday:(e)=>set({reminders:{...rem,endday:e.target.value}}),
+      sheetId:S.sheetId,onSheetId:(e)=>set({sheetId:e.target.value}),serviceEmail:this.serviceEmail,
+      onCopyEmail:copyEmail,copyLabel:S.copied?'Copied ✓':'Copy',lastSync:S.lastSync,onSyncNow:syncNow,syncLabel:S.syncing?'Syncing…':'Sync now',
+    };
+  }
+}
+</script>
+</body>
+</html>

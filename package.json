@@ -1,0 +1,16 @@
+{
+  "name": "personal-timekeeping",
+  "version": "1.0.0",
+  "description": "Personal Noko-like after-the-fact time tracker. Local web app, SQLite source of truth, Google Sheets mirror.",
+  "main": "server.js",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node scripts/seed.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

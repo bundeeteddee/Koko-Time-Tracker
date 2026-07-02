@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimeKeeping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+
+    <header class="topbar">
+      <div class="brand"><span class="brand-dot"></span>TimeKeeping</div>
+      <nav class="tabs" id="tabs"></nav>
+    </header>
+
+    <!-- ===== TODAY ===== -->
+    <section id="view-today" class="view" hidden>
+      <div>
+        <div class="date-row">
+          <span class="nav-btn tk-chip" id="prev-day">◀</span>
+          <div class="date-label" id="date-label"></div>
+          <span class="nav-btn tk-chip" id="next-day">▶</span>
+        </div>
+        <div class="prog-row">
+          <div class="prog-nums"><span id="prog-logged"></span> <span class="prog-target" id="prog-target"></span></div>
+          <div class="hint" id="prog-remain"></div>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
+
+      <div class="log-panel">
+        <div class="log-row1">
+          <input class="tk-input dur-input" id="f-duration" placeholder="2h" autocomplete="off">
+          <div class="chips" id="proj-chips"></div>
+        </div>
+        <div class="desc-wrap">
+          <input class="tk-input desc-input" id="f-desc" placeholder="What did you work on?  Type # to tag…" autocomplete="off">
+          <div class="ac" id="ac" hidden></div>
+        </div>
+        <div class="recent-row">
+          <span class="hint sm">Recent:</span>
+          <span class="chips" id="recent-tags"></span>
+        </div>
+        <div class="log-foot">
+          <span class="hint sm">Enter to log · project stays selected</span>
+          <span class="btn-dark tk-chip" id="log-btn">Log</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="list-head">
+          <span class="mini-head" id="list-title"></span>
+          <span class="hint" id="list-meta"></span>
+        </div>
+        <div id="entries"></div>
+      </div>
+    </section>
+
+    <!-- ===== WEEK ===== -->
+    <section id="view-week" class="view" hidden>
+      <div class="week-head">
+        <div class="date-row">
+          <span class="nav-btn tk-chip" id="prev-week">◀</span>
+          <div class="date-label" id="week-label"></div>
+          <span class="nav-btn tk-chip" id="next-week">▶</span>
+        </div>
+        <div class="week-total">Week total <b id="week-total"></b></div>
+      </div>
+      <div class="week-days" id="week-days"></div>
+      <div class="hint sm">Click any day to backfill it in the Today form. Weekends have no target.</div>
+    </section>
+
+    <!-- ===== REPORTS ===== -->
+    <section id="view-reports" class="view" hidden>
+      <div class="chips" id="range-chips"></div>
+      <div class="custom-range" id="custom-range" hidden>
+        <input type="date" class="tk-input" id="custom-start">
+        <span>→</span>
+        <input type="date" class="tk-input" id="custom-end">
+      </div>
+      <div class="hint" id="range-summary"></div>
+      <div class="report-grid">
+        <div class="panel">
+          <div class="mini-head">Time by project</div>
+          <div class="chart-box"><canvas id="rp-project"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="mini-head tight">Time by tag</div>
+          <div class="hint xs">Multi-tag entries count in each tag, so this can exceed the range total.</div>
+          <div class="chart-box short"><canvas id="rp-tag"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="mini-head">Tags within project</div>
+          <div class="chart-box"><canvas id="rp-tagproj"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="mini-head">Weekly trend · last 12 weeks</div>
+          <div class="chart-box"><canvas id="rp-trend"></canvas></div>
+        </div>
+      </div>
+      <div class="untracked">
+        <div class="unt-head">
+          <span class="mini-head warm">Untracked time</span>
+          <span class="unt-total">Total shortfall <b id="unt-total"></b></span>
+        </div>
+        <div id="unt-rows"></div>
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS ===== -->
+    <section id="view-settings" class="view" hidden>
+      <div>
+        <div class="mini-head">Projects</div>
+        <div class="settings-table" id="proj-table"></div>
+      </div>
+      <div>
+        <div class="mini-head">Tags</div>
+        <div class="settings-table" id="tag-table"></div>
+      </div>
+      <div class="settings-grid">
+        <div>
+          <div class="mini-head">Daily target &amp; workdays</div>
+          <div class="panel pad">
+            <div class="setting-row">Target
+              <input class="tk-input num-input" id="s-target"> hours / workday
+            </div>
+            <div class="chips" id="workday-chips"></div>
+          </div>
+        </div>
+        <div>
+          <div class="mini-head">Reminders</div>
+          <div class="panel pad">
+            <div class="setting-row between">
+              <span id="rem-label">macOS notifications</span>
+              <span class="toggle tk-chip" id="rem-toggle"><span class="knob"></span></span>
+            </div>
+            <div class="setting-row" id="rem-midday-row">Midday <input type="time" class="tk-input" id="s-midday"></div>
+            <div class="setting-row" id="rem-eod-row">End of day <input type="time" class="tk-input" id="s-eod"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="mini-head">Google Sheets backup</div>
+        <div class="panel pad">
+          <div class="setting-row">Sheet ID
+            <input class="tk-input grow" id="s-sheet" placeholder="1A2b3C…paste sheet ID">
+          </div>
+          <div class="setting-row">Share the sheet with
+            <code class="svc-email" id="svc-email">—</code>
+            <span class="btn-light tk-chip" id="copy-email">Copy</span>
+          </div>
+          <div class="setting-row between">
+            <span class="hint">Last sync: <b id="last-sync">never</b></span>
+            <span class="btn-dark tk-chip" id="sync-now">Sync now</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <div class="footer-note">localhost:4321 · personal · after-the-fact logging, no timer</div>
+</div>
+</body>
+</html>
