@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.kienpang.timekeeping</string>
+  <string>com.timekeeping.app</string>
   <key>ProgramArguments</key>
   <array>
     <string>__NODE__</string>

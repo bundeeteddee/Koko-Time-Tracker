@@ -4,7 +4,7 @@ set -euo pipefail
 
 PROJECT="$(cd "$(dirname "$0")/.." && pwd)"
 NODE="$(command -v node)"
-LABEL="com.kienpang.timekeeping"
+LABEL="com.timekeeping.app"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOGS="$HOME/Library/Logs/TimeKeeping"
 

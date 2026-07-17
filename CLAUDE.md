@@ -42,9 +42,9 @@ are logged after the fact (duration + description) — there is no timer.
 
 - `npm start` runs the server directly. For always-on use,
   `scripts/install-launchd.sh` installs it as a launchd LaunchAgent
-  (`com.kienpang.timekeeping`) that starts at login and restarts on crash.
+  (`com.timekeeping.app`) that starts at login and restarts on crash.
 - After server-code changes when running under launchd:
-  `launchctl kickstart -k gui/$UID/com.kienpang.timekeeping`
+  `launchctl kickstart -k gui/$UID/com.timekeeping.app`
 - launchd logs go to `~/Library/Logs/TimeKeeping/`, not `logs/` in the repo:
   launchd cannot use paths inside TCC-protected folders (`~/Documents`,
   `~/Desktop`, `~/Downloads`) — WorkingDirectory or Std*Path there makes the

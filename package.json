@@ -9,7 +9,7 @@
     "start": "node server.js",
     "seed": "node scripts/seed.js"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "dependencies": {
     "express": "^5.2.1",
     "googleapis": "^173.0.0"
