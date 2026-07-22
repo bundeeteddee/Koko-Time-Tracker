@@ -263,6 +263,12 @@ function renderEntries() {
       await Promise.all([loadStatus(), loadDay()]);
       renderToday();
     };
+    for (const inputId of ['edit-dur', 'edit-desc']) {
+      $(inputId).onkeydown = (ev) => {
+        if (ev.key === 'Enter') $('edit-save').onclick();
+        if (ev.key === 'Escape') $('edit-cancel').onclick();
+      };
+    }
   }
 }
 
