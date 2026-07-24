@@ -16,6 +16,7 @@ const S = {
   reportRange: 'this-week',
   customStart: '',
   customEnd: '',
+  insightTag: null,
   allProjects: [],
   allTags: [],
   settingsMap: {},
@@ -489,6 +490,7 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
     ` · ${fmtH(total)} logged across ${dayCount} ${dayCount === 1 ? 'day' : 'days'}`;
 
   drawCharts(entries, projects, trend);
+  renderTagInsights(entries, projects, start, end);
 
   $('unt-total').textContent = fmtH(untracked.total_shortfall_minutes);
   $('unt-rows').innerHTML = untracked.days.length
@@ -594,6 +596,122 @@ function drawCharts(ents, projects, trend) {
       scales: {
         y: { grid: { color: '#e5dac6' }, ticks: { callback: (v) => v + 'h', font: { size: 11 } } },
         x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+      },
+    },
+  });
+}
+
+// ---------- tag insights ----------
+
+function renderTagInsights(entries, projects, start, end) {
+  const box = $('ti-detail');
+  const tm = {};
+  entries.forEach((e) => {
+    [...new Set(tagsIn(e.description))].forEach((n) => { tm[n] = (tm[n] || 0) + e.minutes; });
+  });
+  const tags = Object.entries(tm).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
+  if (!tags.length) {
+    $('ti-chips').innerHTML = '';
+    box.innerHTML = '<div class="unt-none">No hashtags in this range yet. Add #tags to entry descriptions to see insights.</div>';
+    return;
+  }
+  if (!tags.some((t) => t.k === S.insightTag)) S.insightTag = tags[0].k;
+  $('ti-chips').innerHTML = tags.map((t) =>
+    `<span class="ti-chip${t.k === S.insightTag ? ' sel' : ''}" data-tag="${esc(t.k)}">#${esc(t.k)}<span class="h">${fmtH(t.v)}</span></span>`).join('');
+  for (const el of document.querySelectorAll('.ti-chip')) {
+    el.onclick = () => { S.insightTag = el.dataset.tag; renderTagInsights(entries, projects, start, end); };
+  }
+
+  const tag = S.insightTag;
+  const tagEntries = entries.filter((e) => tagsIn(e.description).includes(tag));
+  const tagMin = tm[tag];
+  const totalMin = entries.reduce((a, e) => a + e.minutes, 0);
+  const days = new Set(tagEntries.map((e) => e.entry_date)).size;
+
+  const pm = {};
+  tagEntries.forEach((e) => { const k = e.project_id || 'none'; pm[k] = (pm[k] || 0) + e.minutes; });
+  const projRows = [
+    ...projects.filter((p) => pm[p.id]).map((p) => ({ name: p.name, color: p.color, m: pm[p.id] })),
+    ...(pm.none ? [{ name: 'No project', color: '#b8ab95', m: pm.none }] : []),
+  ].sort((a, b) => b.m - a.m);
+
+  const co = {};
+  tagEntries.forEach((e) => {
+    [...new Set(tagsIn(e.description))].forEach((n) => { if (n !== tag) co[n] = (co[n] || 0) + e.minutes; });
+  });
+  const coTags = Object.entries(co).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v).slice(0, 8);
+
+  const recent = [...tagEntries].sort((a, b) => b.entry_date.localeCompare(a.entry_date)).slice(0, 6);
+
+  box.innerHTML = `
+    <div class="ti-stats">
+      <div class="ti-stat"><div class="n">${fmtH(tagMin)}</div><div class="l">total</div></div>
+      <div class="ti-stat"><div class="n">${totalMin ? Math.round(tagMin / totalMin * 100) : 0}%</div><div class="l">of logged time</div></div>
+      <div class="ti-stat"><div class="n">${tagEntries.length}</div><div class="l">${tagEntries.length === 1 ? 'entry' : 'entries'}</div></div>
+      <div class="ti-stat"><div class="n">${days}</div><div class="l">${days === 1 ? 'day' : 'days'}</div></div>
+    </div>
+    <div class="ti-grid">
+      <div>
+        <div class="ti-sub" id="ti-chart-head"></div>
+        <div class="chart-box short"><canvas id="rp-insight"></canvas></div>
+      </div>
+      <div class="ti-side">
+        <div>
+          <div class="ti-sub">By project</div>
+          ${projRows.map((r) =>
+            `<div class="ti-row"><span class="dot" style="background:${r.color}"></span><span class="nm">${esc(r.name)}</span><span class="hh">${fmtH(r.m)}</span></div>`).join('')}
+        </div>
+        <div>
+          <div class="ti-sub">Appears with</div>
+          ${coTags.length
+            ? `<div class="chips">${coTags.map((t) => `<span class="tag-pill">#${esc(t.k)} · ${fmtH(t.v)}</span>`).join('')}</div>`
+            : '<div class="hint sm">No other tags on these entries.</div>'}
+        </div>
+      </div>
+    </div>
+    <div class="ti-sub">Recent entries</div>
+    <div class="ti-entries">${recent.map((e) => `
+      <div class="ti-entry">
+        <span class="d">${fmtDate(e.entry_date, { month: 'short', day: 'numeric' })}</span>
+        <span class="dur">${fmtDur(e.minutes)}</span>
+        <span class="body">${e.project_name
+          ? `<span class="entry-proj"><span class="dot" style="background:${e.project_color}"></span>${esc(e.project_name)} ·</span>` : ''}${segmentsHTML(e.description)}</span>
+      </div>`).join('')}</div>`;
+
+  drawInsightChart(tagEntries, start, end);
+}
+
+function drawInsightChart(tagEntries, start, end) {
+  const C = window.Chart;
+  if (!C) { setTimeout(() => drawInsightChart(tagEntries, start, end), 100); return; }
+  if (S.charts['rp-insight']) { try { S.charts['rp-insight'].destroy(); } catch (e) { /* canvas gone */ } delete S.charts['rp-insight']; }
+  const el = $('rp-insight');
+  if (!el) return;
+  const nDays = Math.round((new Date(end + 'T00:00:00') - new Date(start + 'T00:00:00')) / 86400000) + 1;
+  const weekly = nDays > 31;
+  const byBucket = {};
+  tagEntries.forEach((e) => {
+    const b = weekly ? startOfWeek(e.entry_date) : e.entry_date;
+    byBucket[b] = (byBucket[b] || 0) + e.minutes;
+  });
+  const labels = [], data = [];
+  const step = weekly ? 7 : 1;
+  let cur = weekly ? startOfWeek(start) : start, guard = 0;
+  while (cur <= end && guard++ < 400) {
+    labels.push(fmtDate(cur, { month: 'short', day: 'numeric' }));
+    data.push(+((byBucket[cur] || 0) / 60).toFixed(2));
+    cur = addDays(cur, step);
+  }
+  $('ti-chart-head').textContent = weekly ? 'Time per week' : 'Time per day';
+  S.charts['rp-insight'] = new C(el, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: '#bf5b34', borderRadius: 3 }] },
+    options: {
+      maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.y + 'h' } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#e5dac6' }, ticks: { callback: (v) => v + 'h', font: { size: 11 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
       },
     },
   });
