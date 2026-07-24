@@ -187,6 +187,7 @@ function renderToday() {
       const d = input.value;
       input.value = (d && !d.endsWith(' ') ? d + ' ' : d) + '#' + el.dataset.tag + ' ';
       input.focus();
+      autosizeDesc(input);
       renderAc();
     };
   }
@@ -210,7 +211,7 @@ function renderEntries() {
             <input class="tk-input dur-input" id="edit-dur" value="${esc(fmtDur(e.minutes))}">
             <div class="chips" id="edit-chips">${projChipsHTML(S.editProject, 'edit-proj')}</div>
           </div>
-          <input class="tk-input desc-input" id="edit-desc" value="${esc(e.description)}">
+          <textarea class="tk-input desc-input" id="edit-desc" rows="1">${esc(e.description)}</textarea>
           <div class="row">
             <span class="btn-dark sm tk-chip" id="edit-save">Save</span>
             <span class="btn-light tk-chip" id="edit-cancel">Cancel</span>
@@ -265,11 +266,22 @@ function renderEntries() {
     };
     for (const inputId of ['edit-dur', 'edit-desc']) {
       $(inputId).onkeydown = (ev) => {
-        if (ev.key === 'Enter') $('edit-save').onclick();
+        if (ev.key === 'Enter') { ev.preventDefault(); $('edit-save').onclick(); }
         if (ev.key === 'Escape') $('edit-cancel').onclick();
       };
     }
+    const editDesc = $('edit-desc');
+    editDesc.oninput = () => autosizeDesc(editDesc);
+    autosizeDesc(editDesc);
   }
+}
+
+// Descriptions stay single-line in the data (newlines from pastes become
+// spaces); the textarea only wraps visually.
+function autosizeDesc(el) {
+  if (el.value.includes('\n')) el.value = el.value.replace(/\s*\n\s*/g, ' ');
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + el.offsetHeight - el.clientHeight + 'px';
 }
 
 // ---------- autocomplete ----------
@@ -315,6 +327,7 @@ function acceptAc(i) {
   const name = i < ad.items.length ? ad.items[i].name : ad.query;
   const input = $('f-desc');
   input.value = input.value.replace(/#([a-z0-9-]*)$/i, '#' + name + ' ');
+  autosizeDesc(input);
   S.acOpen = false;
   S.acIndex = 0;
   renderAc();
@@ -330,6 +343,7 @@ async function submitEntry() {
   });
   $('f-duration').value = '';
   $('f-desc').value = '';
+  autosizeDesc($('f-desc'));
   S.acOpen = false;
   renderAc();
   await Promise.all([loadStatus(), loadDay()]);
@@ -356,7 +370,7 @@ function wireTodayForm() {
     updateAcHighlight();
   });
   const desc = $('f-desc');
-  desc.addEventListener('input', () => { S.acOpen = true; S.acIndex = 0; renderAc(); });
+  desc.addEventListener('input', () => { autosizeDesc(desc); S.acOpen = true; S.acIndex = 0; renderAc(); });
   desc.addEventListener('focus', () => { S.acOpen = true; renderAc(); });
   desc.addEventListener('blur', () => setTimeout(() => { S.acOpen = false; renderAc(); }, 120));
   desc.addEventListener('keydown', (e) => {
