@@ -152,6 +152,9 @@ input, textarea { font-family: inherit; }
 .custom-range { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8a8272; }
 .custom-range .tk-input { padding: 7px 9px; border-radius: 8px; }
 .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+/* Time by tag grows with the tag count; let its neighbour keep its own height
+   instead of stretching to match and carrying the dead space inside its card. */
+.report-grid > .panel { align-self: start; }
 .chart-box { height: 210px; position: relative; }
 .chart-box.short { height: 186px; }
 .tag-insights { padding: 17px 18px; }

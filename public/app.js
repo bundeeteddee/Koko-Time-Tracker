@@ -562,6 +562,11 @@ function drawCharts(ents, projects, trend) {
   const tl = ta.map((t) => '#' + t.k), td = ta.map((t) => +(t.v / 60).toFixed(2));
   const tc = ta.map((t) => tagColor(t.k));
   if (untagged > 0) { tl.push('untagged'); td.push(+(untagged / 60).toFixed(2)); tc.push('#c7bca6'); }
+  // Every bar gets a label: autoSkip would quietly drop half of them and leave
+  // the survivors sitting next to bars they don't belong to. Grow the box to
+  // fit instead — this panel is the full breakdown, so it has to show all of it.
+  const tagBox = $('rp-tag').parentElement;
+  if (tagBox) tagBox.style.height = Math.max(186, tl.length * 22 + 34) + 'px';
   mk('rp-tag', {
     type: 'bar',
     data: { labels: tl, datasets: [{ data: td, backgroundColor: tc, borderRadius: 4 }] },
@@ -570,7 +575,7 @@ function drawCharts(ents, projects, trend) {
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + 'h' } } },
       scales: {
         x: { grid: { color: '#e5dac6' }, ticks: { callback: (v) => v + 'h', font: { size: 11 } } },
-        y: { grid: { display: false }, ticks: { font: { size: 12 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 12 }, autoSkip: false } },
       },
     },
   });
