@@ -490,6 +490,7 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
     ` · ${fmtH(total)} logged across ${dayCount} ${dayCount === 1 ? 'day' : 'days'}`;
 
   drawCharts(entries, projects, trend);
+  renderNoProject(entries);
   renderTagInsights(entries, projects, start, end);
 
   $('unt-total').textContent = fmtH(untracked.total_shortfall_minutes);
@@ -599,6 +600,67 @@ function drawCharts(ents, projects, trend) {
       },
     },
   });
+}
+
+// ---------- no-project breakdown ----------
+
+function renderNoProject(entries) {
+  const box = $('np-detail');
+  const npEntries = entries.filter((e) => !e.project_id);
+  if (!npEntries.length) {
+    box.innerHTML = `<div class="unt-none">${entries.length
+      ? 'Every entry in this range has a project. Nothing unaccounted for.'
+      : 'Nothing logged in this range yet.'}</div>`;
+    return;
+  }
+
+  const npTotal = npEntries.reduce((a, e) => a + e.minutes, 0);
+  const totalMin = entries.reduce((a, e) => a + e.minutes, 0);
+  const days = new Set(npEntries.map((e) => e.entry_date)).size;
+
+  const tm = {};
+  const bare = [];
+  npEntries.forEach((e) => {
+    const t = [...new Set(tagsIn(e.description))];
+    if (!t.length) bare.push(e);
+    else t.forEach((n) => { tm[n] = (tm[n] || 0) + e.minutes; });
+  });
+  const bareMin = bare.reduce((a, e) => a + e.minutes, 0);
+
+  const rows = Object.entries(tm).map(([k, v]) => ({ label: '#' + k, m: v })).sort((a, b) => b.m - a.m);
+  rows.forEach((r, i) => { r.color = WARM[i % WARM.length]; });
+  if (bareMin > 0) rows.push({ label: 'no tags either', m: bareMin, color: '#c7bca6', bare: true });
+
+  // Full entry minutes land in every tag it carries, matching the Time-by-tag chart,
+  // so the rows can add up to more than the no-project total.
+  const overlap = rows.reduce((a, r) => a + r.m, 0) > npTotal;
+  const max = Math.max(...rows.map((r) => r.m));
+
+  box.innerHTML = `
+    <div class="ti-stats">
+      <div class="ti-stat"><div class="n">${fmtH(npTotal)}</div><div class="l">without a project</div></div>
+      <div class="ti-stat"><div class="n">${totalMin ? Math.round(npTotal / totalMin * 100) : 0}%</div><div class="l">of logged time</div></div>
+      <div class="ti-stat"><div class="n">${npEntries.length}</div><div class="l">${npEntries.length === 1 ? 'entry' : 'entries'}</div></div>
+      <div class="ti-stat"><div class="n">${days}</div><div class="l">${days === 1 ? 'day' : 'days'}</div></div>
+    </div>
+    <div class="ti-sub">Grouped by tag</div>
+    <div class="np-rows">${rows.map((r) => `
+      <div class="np-row${r.bare ? ' bare' : ''}">
+        <span class="nm">${esc(r.label)}</span>
+        <span class="bar"><i style="width:${(r.m / max * 100).toFixed(1)}%;background:${r.color}"></i></span>
+        <span class="hh">${fmtH(r.m)}</span>
+        <span class="pc">${Math.round(r.m / npTotal * 100)}%</span>
+      </div>`).join('')}</div>
+    ${overlap ? '<div class="hint xs np-note">Entries carrying several tags count in each one, so these add up to more than the total above.</div>' : ''}
+    ${bare.length ? `
+      <div class="ti-sub np-baresub">Untagged as well — ${fmtH(bareMin)} with nothing to go on</div>
+      <div class="ti-entries">${[...bare].sort((a, b) => b.entry_date.localeCompare(a.entry_date)).slice(0, 6).map((e) => `
+        <div class="ti-entry">
+          <span class="d">${fmtDate(e.entry_date, { month: 'short', day: 'numeric' })}</span>
+          <span class="dur">${fmtDur(e.minutes)}</span>
+          <span class="body">${segmentsHTML(e.description)}</span>
+        </div>`).join('')}</div>
+      ${bare.length > 6 ? `<div class="hint sm np-more">+ ${bare.length - 6} more</div>` : ''}` : ''}`;
 }
 
 // ---------- tag insights ----------
