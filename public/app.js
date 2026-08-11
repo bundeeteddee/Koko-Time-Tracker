@@ -17,6 +17,7 @@ const S = {
   customStart: '',
   customEnd: '',
   insightTag: null,
+  tagColors: {},         // tag name -> WARM color, rebuilt per report render
   allProjects: [],
   allTags: [],
   settingsMap: {},
@@ -489,6 +490,7 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
     `Showing <b style="color:#2d2822">${fmtDate(start, { month: 'short', day: 'numeric' })} – ${fmtDate(end, { month: 'short', day: 'numeric' })}</b>` +
     ` · ${fmtH(total)} logged across ${dayCount} ${dayCount === 1 ? 'day' : 'days'}`;
 
+  S.tagColors = buildTagColors(entries);
   drawCharts(entries, projects, trend);
   renderNoProject(entries);
   renderTagInsights(entries, projects, start, end);
@@ -500,6 +502,26 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
         <span class="s"><span class="d">${fmtH(u.logged_minutes)} of ${fmtH(untracked.target_minutes)} · </span>${fmtH(u.shortfall_minutes)} short</span></div>`).join('')
     : '<div class="unt-none">Every workday in range hit its target. Nice.</div>';
 }
+
+// One tag, one color, across every panel in the range. Rank by total minutes
+// rather than hashing the name: a hash would also hold across ranges, but it
+// collides — #ai and #anthropiccert land on the same slot, which in the stacked
+// "tags within project" bar means two identical segments under two legend keys.
+// Ranking keeps at least the top WARM.length tags distinct, which is what that
+// chart actually needs.
+function buildTagColors(ents) {
+  const tm = {};
+  ents.forEach((e) => {
+    [...new Set(tagsIn(e.description))].forEach((n) => { tm[n] = (tm[n] || 0) + e.minutes; });
+  });
+  const map = {};
+  Object.entries(tm)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])) // name breaks ties so the map is stable
+    .forEach(([n], i) => { map[n] = WARM[i % WARM.length]; });
+  return map;
+}
+
+function tagColor(name) { return S.tagColors[name] || WARM[0]; }
 
 function drawCharts(ents, projects, trend) {
   const C = window.Chart;
@@ -538,10 +560,11 @@ function drawCharts(ents, projects, trend) {
   });
   const ta = Object.entries(tm).map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v);
   const tl = ta.map((t) => '#' + t.k), td = ta.map((t) => +(t.v / 60).toFixed(2));
-  if (untagged > 0) { tl.push('untagged'); td.push(+(untagged / 60).toFixed(2)); }
+  const tc = ta.map((t) => tagColor(t.k));
+  if (untagged > 0) { tl.push('untagged'); td.push(+(untagged / 60).toFixed(2)); tc.push('#c7bca6'); }
   mk('rp-tag', {
     type: 'bar',
-    data: { labels: tl, datasets: [{ data: td, backgroundColor: tl.map((l, i) => l === 'untagged' ? '#c7bca6' : WARM[i % WARM.length]), borderRadius: 4 }] },
+    data: { labels: tl, datasets: [{ data: td, backgroundColor: tc, borderRadius: 4 }] },
     options: {
       maintainAspectRatio: false, indexAxis: 'y', animation: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.x + 'h' } } },
@@ -557,9 +580,9 @@ function drawCharts(ents, projects, trend) {
   const usedProjects = projects.filter((p) => pm[p.id]);
   const cats = [...usedProjects.map((p) => p.id), 'none'];
   const clab = [...usedProjects.map((p) => p.name), 'No project'];
-  const ds = top.map((tag, i) => ({
+  const ds = top.map((tag) => ({
     label: '#' + tag,
-    backgroundColor: WARM[i % WARM.length],
+    backgroundColor: tagColor(tag),
     borderRadius: 3,
     data: cats.map((cid) => {
       let sum = 0;
@@ -627,8 +650,9 @@ function renderNoProject(entries) {
   });
   const bareMin = bare.reduce((a, e) => a + e.minutes, 0);
 
-  const rows = Object.entries(tm).map(([k, v]) => ({ label: '#' + k, m: v })).sort((a, b) => b.m - a.m);
-  rows.forEach((r, i) => { r.color = WARM[i % WARM.length]; });
+  const rows = Object.entries(tm)
+    .map(([k, v]) => ({ label: '#' + k, m: v, color: tagColor(k) }))
+    .sort((a, b) => b.m - a.m);
   if (bareMin > 0) rows.push({ label: 'no tags either', m: bareMin, color: '#c7bca6', bare: true });
 
   // Full entry minutes land in every tag it carries, matching the Time-by-tag chart,
@@ -767,7 +791,7 @@ function drawInsightChart(tagEntries, start, end) {
   $('ti-chart-head').textContent = weekly ? 'Time per week' : 'Time per day';
   S.charts['rp-insight'] = new C(el, {
     type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: '#bf5b34', borderRadius: 3 }] },
+    data: { labels, datasets: [{ data, backgroundColor: tagColor(S.insightTag), borderRadius: 3 }] },
     options: {
       maintainAspectRatio: false, animation: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ' ' + c.parsed.y + 'h' } } },
