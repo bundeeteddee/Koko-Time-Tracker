@@ -50,6 +50,10 @@ are logged after the fact (duration + description) — there is no timer.
   `~/Desktop`, `~/Downloads`) — WorkingDirectory or Std*Path there makes the
   job fail with exit code 78. Keep the plist template that way.
 - Frontend changes need only a browser hard-refresh; no server restart.
+- `npm test` runs `node --test` over `test/`. Pure helpers meant to be tested
+  live in their own `public/*.js` file with a guarded `module.exports` at the
+  bottom (see `public/duration.js`) so Node can require them while the browser
+  still loads them as a plain `<script>` — no bundler, no test framework.
 - Verify UI changes by driving the real app headlessly (e.g. puppeteer-core
   with system Chrome against localhost:4321), and exercise both keyboard and
   mouse paths — hover-triggered re-renders have previously broken mouse

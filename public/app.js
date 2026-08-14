@@ -40,28 +40,7 @@ function fmtDate(isoDate, opts) {
   return new Date(isoDate + 'T00:00:00').toLocaleDateString('en-US', opts || { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function parseDur(s) {
-  s = (s || '').trim().toLowerCase();
-  if (!s) return 0;
-  let m;
-  if ((m = s.match(/^(\d+):(\d{1,2})$/))) return (+m[1]) * 60 + (+m[2]);
-  if ((m = s.match(/^(\d+)h(\d{1,2})$/))) return (+m[1]) * 60 + (+m[2]);
-  if ((m = s.match(/^(\d*\.\d+)\s*h?$/))) return Math.round(parseFloat(m[1]) * 60);
-  let mins = 0, ok = false;
-  const re = /(\d+)\s*(h|m)/g;
-  let r;
-  while ((r = re.exec(s))) { ok = true; mins += r[2] === 'h' ? (+r[1]) * 60 : (+r[1]); }
-  if (ok) return mins;
-  if ((m = s.match(/^(\d+)$/))) return +m[1];
-  return 0;
-}
-function fmtDur(mins) {
-  const h = Math.floor(mins / 60), m = mins % 60;
-  if (h && m) return h + 'h' + String(m).padStart(2, '0');
-  if (h) return h + 'h';
-  return m + 'm';
-}
-function fmtH(mins) { return (Math.round(mins / 60 * 10) / 10) + 'h'; }
+// parseDur / fmtDur / fmtH live in duration.js, loaded ahead of this script.
 
 const TAG_RE = /#[a-z0-9][a-z0-9-]*/gi;
 function tagsIn(desc) {
