@@ -17,6 +17,12 @@ const S = {
   customStart: '',
   customEnd: '',
   insightTag: null,
+  insightProject: undefined, // undefined = not initialized yet; null = "No project"
+  piEditingId: null,
+  piEditProject: null,
+  piPeriod: 'range',     // 'range' = follow the page's range chips; 'week' | 'month' = panel's own
+  piAnchor: null,        // any date inside the shown week/month
+  piPage: null,          // last payload from renderReports, for re-renders that don't refetch
   tagColors: {},         // tag name -> WARM color, rebuilt per report render
   allProjects: [],
   allTags: [],
@@ -450,7 +456,7 @@ async function refreshReports() {
     api('/reports/trends?period=week&count=12'),
     api(`/reports/untracked?from=${start}&to=${end}`),
   ]);
-  renderReports({ start, end, entries, projects, trend, untracked });
+  await renderReports({ start, end, entries, projects, trend, untracked });
 }
 
 function renderReports({ start, end, entries, projects, trend, untracked }) {
@@ -473,6 +479,9 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
   drawCharts(entries, projects, trend);
   renderNoProject(entries);
   renderTagInsights(entries, projects, start, end);
+  // Async because the panel may fetch its own week/month window; returned so
+  // callers can await a fully-painted Reports page.
+  const piDone = refreshProjectInsights({ entries, projects, start, end });
 
   $('unt-total').textContent = fmtH(untracked.total_shortfall_minutes);
   $('unt-rows').innerHTML = untracked.days.length
@@ -480,6 +489,8 @@ function renderReports({ start, end, entries, projects, trend, untracked }) {
       `<div class="unt-row"><span class="d">${fmtDate(u.date, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         <span class="s"><span class="d">${fmtH(u.logged_minutes)} of ${fmtH(untracked.target_minutes)} · </span>${fmtH(u.shortfall_minutes)} short</span></div>`).join('')
     : '<div class="unt-none">Every workday in range hit its target. Nice.</div>';
+
+  return piDone;
 }
 
 // One tag, one color, across every panel in the range. Rank by total minutes
@@ -688,7 +699,9 @@ function renderTagInsights(entries, projects, start, end) {
   if (!tags.some((t) => t.k === S.insightTag)) S.insightTag = tags[0].k;
   $('ti-chips').innerHTML = tags.map((t) =>
     `<span class="ti-chip${t.k === S.insightTag ? ' sel' : ''}" data-tag="${esc(t.k)}">#${esc(t.k)}<span class="h">${fmtH(t.v)}</span></span>`).join('');
-  for (const el of document.querySelectorAll('.ti-chip')) {
+  // Scoped to #ti-chips: the project-insights panel reuses .ti-chip for styling,
+  // and an unscoped query would hand its chips the tag handler.
+  for (const el of document.querySelectorAll('#ti-chips .ti-chip')) {
     el.onclick = () => { S.insightTag = el.dataset.tag; renderTagInsights(entries, projects, start, end); };
   }
 
@@ -785,6 +798,221 @@ function drawInsightChart(tagEntries, start, end) {
       },
     },
   });
+}
+
+// ---------- project insights ----------
+
+const PI_MODES = [['range', 'Page range'], ['week', 'Week'], ['month', 'Month']];
+
+// The panel can follow the page's range chips or step through weeks/months on
+// its own — everything inside it (chip totals, stats, day list) uses whichever
+// window is active, so the percentages stay honest.
+function piWindow(page) {
+  if (S.piPeriod === 'week') {
+    const s = startOfWeek(S.piAnchor);
+    return { start: s, end: addDays(s, 6) };
+  }
+  if (S.piPeriod === 'month') {
+    const d = new Date(S.piAnchor + 'T00:00:00');
+    return { start: iso(new Date(d.getFullYear(), d.getMonth(), 1)), end: iso(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
+  }
+  return { start: page.start, end: page.end };
+}
+
+function piPeriodLabel({ start, end }) {
+  if (S.piPeriod === 'month') return fmtDate(start, { month: 'long', year: 'numeric' });
+  return fmtDate(start, { month: 'short', day: 'numeric' }) + ' – ' + fmtDate(end, { month: 'short', day: 'numeric' });
+}
+
+let piReq = 0;
+
+async function refreshProjectInsights(page) {
+  if (page) S.piPage = page;
+  const p = S.piPage;
+  if (!p) return;
+  if (!S.piAnchor) S.piAnchor = S.status.today;
+  const win = piWindow(p);
+  // 'range' already has its entries in hand; the stepper modes need their own window.
+  const mine = ++piReq;
+  const entries = S.piPeriod === 'range' ? p.entries : await api(`/entries?from=${win.start}&to=${win.end}`);
+  if (mine !== piReq) return; // a faster click already superseded this fetch
+  renderProjectInsights(entries, p.projects, win);
+}
+
+function renderProjectInsights(entries, projects, win) {
+  const box = $('pi-detail');
+
+  $('pi-modes').innerHTML = PI_MODES.map(([k, label]) =>
+    `<span class="range-chip tk-chip${S.piPeriod === k ? ' sel' : ''}" data-pi-mode="${k}">${label}</span>`).join('');
+  for (const el of document.querySelectorAll('#pi-modes [data-pi-mode]')) {
+    el.onclick = () => {
+      S.piPeriod = el.dataset.piMode;
+      S.piEditingId = null;
+      refreshProjectInsights();
+    };
+  }
+  $('pi-stepper').hidden = S.piPeriod === 'range';
+  $('pi-period-label').textContent = piPeriodLabel(win);
+  const step = (n) => () => {
+    if (S.piPeriod === 'week') S.piAnchor = addDays(startOfWeek(S.piAnchor), 7 * n);
+    else { const d = new Date(S.piAnchor + 'T00:00:00'); S.piAnchor = iso(new Date(d.getFullYear(), d.getMonth() + n, 1)); }
+    S.piEditingId = null;
+    refreshProjectInsights();
+  };
+  $('pi-prev').onclick = step(-1);
+  $('pi-next').onclick = step(1);
+
+  const pm = {};
+  entries.forEach((e) => { const k = e.project_id ?? 'none'; pm[k] = (pm[k] || 0) + e.minutes; });
+
+  // Every live project gets a chip, 0h included, so you can ask "did I touch this
+  // at all?" — archived ones only show up when they actually have time here.
+  const chips = [
+    ...projects.filter((p) => !p.archived || pm[p.id]).map((p) => ({
+      key: p.id, name: p.name, color: p.color, m: pm[p.id] || 0, archived: !!p.archived,
+    })),
+    ...(pm.none ? [{ key: null, name: 'No project', color: '#b8ab95', m: pm.none }] : []),
+  ].sort((a, b) => b.m - a.m || a.name.localeCompare(b.name));
+
+  if (!chips.length) {
+    $('pi-chips').innerHTML = '';
+    box.innerHTML = '<div class="unt-none">No projects yet.</div>';
+    return;
+  }
+  if (!chips.some((c) => c.key === S.insightProject)) S.insightProject = chips[0].key;
+
+  $('pi-chips').innerHTML = chips.map((c) =>
+    `<span class="ti-chip${c.key === S.insightProject ? ' sel' : ''}${c.m ? '' : ' empty'}${c.archived ? ' arch' : ''}"
+      data-proj="${c.key === null ? 'none' : c.key}"${c.archived ? ' title="archived project"' : ''}>
+      <span class="dot" style="background:${c.key === S.insightProject ? 'rgba(255,255,255,.85)' : c.color}"></span>${esc(c.name)}<span class="h">${fmtH(c.m)}</span></span>`).join('');
+  for (const el of document.querySelectorAll('#pi-chips .ti-chip')) {
+    el.onclick = () => {
+      S.insightProject = el.dataset.proj === 'none' ? null : Number(el.dataset.proj);
+      S.piEditingId = null;
+      renderProjectInsights(entries, projects, win);
+    };
+  }
+
+  const sel = chips.find((c) => c.key === S.insightProject);
+  const projEntries = entries.filter((e) => (e.project_id ?? null) === S.insightProject);
+  const totalMin = entries.reduce((a, e) => a + e.minutes, 0);
+
+  // An edit left open on an entry that moved out of this list (project changed,
+  // period switched) would otherwise linger in state and reopen unexpectedly.
+  if (S.piEditingId !== null && !projEntries.some((e) => e.id === S.piEditingId)) S.piEditingId = null;
+
+  if (!projEntries.length) {
+    box.innerHTML = `<div class="unt-none">No time logged on <b>${esc(sel.name)}</b> between
+      ${fmtDate(win.start, { month: 'short', day: 'numeric' })} and ${fmtDate(win.end, { month: 'short', day: 'numeric' })}.</div>`;
+    return;
+  }
+
+  const byDay = {};
+  projEntries.forEach((e) => { (byDay[e.entry_date] = byDay[e.entry_date] || []).push(e); });
+  const days = Object.keys(byDay).sort((a, b) => b.localeCompare(a)); // newest first
+  const dayTotals = days.map((d) => byDay[d].reduce((a, e) => a + e.minutes, 0));
+  const maxDay = Math.max(...dayTotals);
+
+  box.innerHTML = `
+    <div class="ti-stats">
+      <div class="ti-stat"><div class="n">${fmtH(sel.m)}</div><div class="l">total</div></div>
+      <div class="ti-stat"><div class="n">${totalMin ? Math.round(sel.m / totalMin * 100) : 0}%</div><div class="l">of logged time</div></div>
+      <div class="ti-stat"><div class="n">${projEntries.length}</div><div class="l">${projEntries.length === 1 ? 'entry' : 'entries'}</div></div>
+      <div class="ti-stat"><div class="n">${days.length}</div><div class="l">${days.length === 1 ? 'day' : 'days'}</div></div>
+      <div class="ti-stat"><div class="n">${fmtH(Math.round(sel.m / days.length))}</div><div class="l">per active day</div></div>
+    </div>
+    <div class="ti-sub">Day by day</div>
+    <div class="pi-days">${days.map((d, i) => `
+      <div class="pi-day">
+        <div class="pi-day-head">
+          <span class="d">${fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+          <span class="bar"><i style="width:${(dayTotals[i] / maxDay * 100).toFixed(1)}%;background:${sel.color}"></i></span>
+          <span class="hh">${fmtH(dayTotals[i])}</span>
+        </div>
+        ${byDay[d].map(piEntryHTML).join('')}
+      </div>`).join('')}</div>`;
+
+  wirePiEntries(entries, projects, win);
+}
+
+// Own element ids and chip class throughout: Today's hidden edit form keeps
+// #edit-dur & friends alive in the DOM, and its .form-proj handlers are wired
+// with an unscoped query — sharing either would cross the two forms' wires.
+function piEntryHTML(e) {
+  if (S.piEditingId === e.id) {
+    return `<div class="pi-entry editing" data-id="${e.id}">
+      <div class="entry-edit">
+        <div class="row">
+          <input class="tk-input dur-input" id="pi-edit-dur" value="${esc(fmtDur(e.minutes))}">
+          <div class="chips" id="pi-edit-chips">${projChipsHTML(S.piEditProject, 'pi-edit-proj')}</div>
+        </div>
+        <textarea class="tk-input desc-input" id="pi-edit-desc" rows="1">${esc(e.description)}</textarea>
+        <div class="row">
+          <span class="btn-dark sm tk-chip" id="pi-edit-save">Save</span>
+          <span class="btn-light tk-chip" id="pi-edit-cancel">Cancel</span>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="pi-entry" data-id="${e.id}">
+    <span class="dur">${fmtDur(e.minutes)}</span>
+    <span class="body">${segmentsHTML(e.description) || '<span class="pi-nodesc">no description</span>'}</span>
+    <span class="acts"><span data-pi-act="edit" title="Edit this entry">✎</span></span>
+  </div>`;
+}
+
+function wirePiEntries(entries, projects, win) {
+  const box = $('pi-detail');
+  for (const el of box.querySelectorAll('[data-pi-act]')) {
+    const id = Number(el.closest('.pi-entry').dataset.id);
+    el.onclick = () => {
+      const entry = entries.find((x) => x.id === id);
+      S.piEditingId = id;
+      S.piEditProject = entry.project_id ?? null;
+      renderProjectInsights(entries, projects, win);
+    };
+  }
+  if (S.piEditingId === null) return;
+
+  const wireChips = () => {
+    for (const el of box.querySelectorAll('.pi-edit-proj')) {
+      el.onclick = () => {
+        S.piEditProject = el.dataset.proj === 'none' ? null : Number(el.dataset.proj);
+        $('pi-edit-chips').innerHTML = projChipsHTML(S.piEditProject, 'pi-edit-proj');
+        wireChips();
+      };
+    }
+  };
+  wireChips();
+
+  const entry = entries.find((x) => x.id === S.piEditingId);
+  const cancel = () => { S.piEditingId = null; renderProjectInsights(entries, projects, win); };
+  const save = async () => {
+    const minutes = parseDur($('pi-edit-dur').value);
+    if (minutes <= 0) { $('pi-edit-dur').focus(); return; }
+    try {
+      await api('/entries/' + S.piEditingId, {
+        method: 'PUT',
+        // entry_date rides along unchanged — the PUT replaces the whole row.
+        body: { entry_date: entry.entry_date, minutes, project_id: S.piEditProject, description: $('pi-edit-desc').value.trim() },
+      });
+    } catch (err) { alert('Could not save: ' + err.message); return; }
+    S.piEditingId = null;
+    // Full refresh, not a local re-render: `entries` here is the pre-edit copy,
+    // so day totals and the stats row would keep the old numbers.
+    await Promise.all([loadStatus(), refreshReports()]);
+  };
+  $('pi-edit-save').onclick = save;
+  $('pi-edit-cancel').onclick = cancel;
+  for (const inputId of ['pi-edit-dur', 'pi-edit-desc']) {
+    $(inputId).onkeydown = (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+      if (ev.key === 'Escape') cancel();
+    };
+  }
+  const desc = $('pi-edit-desc');
+  desc.oninput = () => autosizeDesc(desc);
+  autosizeDesc(desc);
 }
 
 function wireReports() {
