@@ -19,6 +19,10 @@ are logged after the fact (duration + description) — there is no timer.
 - `public/` — no-build vanilla-JS SPA (`index.html` is a static skeleton,
   `app.js` renders into it, Chart.js from CDN). No framework, no bundler —
   keep it that way.
+- `menubar/koko.1m.sh` — SwiftBar/xbar plugin: today's total in the macOS
+  status bar plus a one-line log dialog. Deliberately dumb (curl + sed only,
+  no jq/node/python) because `POST /api/quick` does the parsing
+  (`src/quick-parse.js`)
 - `design/PersonalTimeKeeping-App.dc.html` — the original design mock the UI
   is translated from
 

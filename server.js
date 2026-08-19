@@ -5,6 +5,9 @@ const reminders = require('./src/reminders');
 
 const app = express();
 app.use(express.json());
+// Form encoding as well as JSON, so shell clients (the menu bar plugin) can
+// post with `curl --data-urlencode` and skip JSON-escaping user text.
+app.use(express.urlencoded({ extended: false }));
 app.use('/api', routes);
 app.use(express.static(path.join(__dirname, 'public')));
 

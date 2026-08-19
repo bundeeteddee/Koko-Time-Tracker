@@ -89,6 +89,20 @@ bash scripts/uninstall-launchd.sh  # removes it
 Logs go to `~/Library/Logs/TimeKeeping/` (launchd can't write inside
 `~/Documents`, which macOS protects).
 
+## Menu bar quick logging (macOS)
+
+For logging without going near a browser window, `menubar/koko.1m.sh` puts
+today's total in the status bar with a **Log entry…** dialog behind it. One line
+does the whole entry:
+
+```
+1:30 fixed the sheets sync #bugfix @Koko
+```
+
+Setup and syntax: [`menubar/README.md`](menubar/README.md). The parsing is
+server-side (`POST /api/quick`), so a Shortcut or a plain `curl` works just as
+well as the plugin.
+
 ## Reminders
 
 If a workday is looking under-logged, TimeKeeping sends a macOS notification

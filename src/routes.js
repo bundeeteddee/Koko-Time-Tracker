@@ -1,4 +1,5 @@
 const express = require('express');
+const { parseQuick, resolveProject } = require('./quick-parse');
 const { db, syncEntryTags, getSettings, setSetting, markDirty, nextProjectColor } = require('./db');
 
 const router = express.Router();
@@ -57,15 +58,52 @@ function validateEntry(body) {
   return { minutes, entryDate: body.entry_date, projectId, description: String(body.description || '').trim() };
 }
 
-router.post('/entries', (req, res) => {
-  const v = validateEntry(req.body);
-  if (v.error) return res.status(400).json({ error: v.error });
+function insertEntry(v) {
   const info = db.prepare('INSERT INTO entries (entry_date, minutes, project_id, description) VALUES (?, ?, ?, ?)')
     .run(v.entryDate, v.minutes, v.projectId, v.description);
   const id = Number(info.lastInsertRowid);
   syncEntryTags(id, v.description);
   markDirty();
-  res.status(201).json(entryRow(db.prepare(ENTRY_SELECT + ' WHERE e.id = ?').get(id)));
+  return entryRow(db.prepare(ENTRY_SELECT + ' WHERE e.id = ?').get(id));
+}
+
+router.post('/entries', (req, res) => {
+  const v = validateEntry(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  res.status(201).json(insertEntry(v));
+});
+
+// Logs a whole entry from one line of text — see src/quick-parse.js for why the
+// parsing lives on this side. Used by the menu bar plugin, and by anything else
+// that only has a single input field to offer.
+router.post('/quick', (req, res) => {
+  const body = req.body || {};
+  const parsed = parseQuick(body.text);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const active = db.prepare(`
+    SELECT p.id, p.name FROM projects p WHERE p.archived = 0
+    ORDER BY (SELECT MAX(entry_date) FROM entries WHERE project_id = p.id) DESC NULLS LAST, p.name`).all();
+
+  let projectId = null;
+  if (parsed.project) {
+    const match = resolveProject(active, parsed.project);
+    if (match.error) return res.status(400).json({ error: match.error });
+    projectId = match.project.id;
+  } else if (active.length) {
+    // No @mention: fall back to the most recently used project, which is what
+    // the web form already preselects.
+    projectId = active[0].id;
+  }
+
+  const v = validateEntry({
+    minutes: parsed.minutes,
+    entry_date: body.entry_date || localToday(),
+    project_id: projectId,
+    description: parsed.description,
+  });
+  if (v.error) return res.status(400).json({ error: v.error });
+  res.status(201).json(insertEntry(v));
 });
 
 router.put('/entries/:id', (req, res) => {
