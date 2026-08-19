@@ -9,7 +9,9 @@ app.use(express.json());
 // post with `curl --data-urlencode` and skip JSON-escaping user text.
 app.use(express.urlencoded({ extended: false }));
 app.use('/api', routes);
-app.use(express.static(path.join(__dirname, 'public')));
+// extensions: serve /quick as quick.html — the menu bar opens that URL, and a
+// visible ".html" in a window with no address bar is just noise.
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 app.use((err, req, res, next) => {
   console.error(err);

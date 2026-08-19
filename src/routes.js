@@ -1,5 +1,5 @@
 const express = require('express');
-const { parseQuick, resolveProject } = require('./quick-parse');
+const { parseQuick, resolveProject } = require('../public/quick-parse.js');
 const { db, syncEntryTags, getSettings, setSetting, markDirty, nextProjectColor } = require('./db');
 
 const router = express.Router();

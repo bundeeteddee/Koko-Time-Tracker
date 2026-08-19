@@ -45,11 +45,23 @@ Point it at a different port with a `KOKO_URL` environment variable
 
 ## What you can type
 
-One line, duration first:
+**Log entry…** opens a small chromeless window with one text field. Type the
+whole entry on one line, duration first:
 
 ```
 1:30 fixed the sheets sync #bugfix @Koko
 ```
+
+Typing `#` suggests your existing tags with their use counts, and offers to
+create the one you're typing; `@` suggests projects. **⏎** takes the highlighted
+suggestion while the list is up and logs the entry when it isn't — the hint in
+the corner says which. **esc** dismisses the list, then closes the window. As
+you type, the corner shows the duration, project and tags the server will
+actually record, using the server's own parser rather than a second copy of it.
+
+The window is a Chrome app window, sized by the page itself. Without Chrome the
+plugin falls back to a plain AppleScript dialog, which takes exactly the same
+one-line syntax but has no suggestions.
 
 - **Duration** — anything the app's own duration box takes: `90`, `90m`, `2h`,
   `1:30`, `1h30`, `1.5h` (or `1,5h`). A bare number is minutes.

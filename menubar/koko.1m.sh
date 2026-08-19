@@ -47,6 +47,15 @@ unescape() { sed 's/\\"/"/g; s/\\\\/\\/g'; }
 # ---------- actions (re-invocations of this same script by SwiftBar) ----------
 
 if [ "$1" = "log" ]; then
+  # Preferred: a small chromeless window with #tag and @project completion.
+  # --window-size only applies when Chrome starts cold, so the page sizes itself
+  # too; see public/quick.js.
+  if [ -d "/Applications/Google Chrome.app" ]; then
+    open -na "Google Chrome" --args --app="$BASE/quick" --window-size=560,150
+    exit 0
+  fi
+
+  # Fallback with no completion, for machines without Chrome.
   text=$(osascript \
     -e 'display dialog "Log time — e.g. 1:30 fixed the sheets sync #bugfix @Koko" default answer "" with title "Koko" buttons {"Cancel", "Log"} default button "Log"' \
     -e 'text returned of result' 2>/dev/null) || exit 0

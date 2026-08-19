@@ -18,7 +18,13 @@ are logged after the fact (duration + description) — there is no timer.
   a service account, with startup catch-up, hourly re-mirror, and backoff retry
 - `public/` — no-build vanilla-JS SPA (`index.html` is a static skeleton,
   `app.js` renders into it, Chart.js from CDN). No framework, no bundler —
-  keep it that way.
+  keep it that way. `quick.html`/`quick.js`/`quick.css` are a separate
+  single-field page opened from the menu bar as a Chrome app window; it sizes
+  the window to its own content because Chrome ignores `--window-size` when
+  it's already running
+- `public/quick-parse.js` — the one-line quick-entry parser, dual-loaded like
+  `duration.js`: required by `src/routes.js` for `POST /api/quick` and loaded
+  as a plain script by the popup, so its live preview is the server's own parse
 - `menubar/koko.1m.sh` — SwiftBar/xbar plugin: today's total in the macOS
   status bar plus a one-line log dialog. Deliberately dumb (curl + sed only,
   no jq/node/python) because `POST /api/quick` does the parsing

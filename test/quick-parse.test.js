@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseQuick, resolveProject } = require('../src/quick-parse.js');
+const { parseQuick, resolveProject } = require('../public/quick-parse.js');
 
 function splits(name, cases) {
   test(name, () => {

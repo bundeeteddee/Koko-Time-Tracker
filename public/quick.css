@@ -1,0 +1,56 @@
+/* Styles for the quick-log popup only. It's a separate page from the app, so it
+   doesn't load style.css — the tokens are repeated here rather than shared,
+   which keeps the app's stylesheet free of rules that only apply to a 560px
+   chromeless window. */
+
+html, body { margin: 0; background: #f4efe6; color: #2d2822;
+  font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
+
+/* Auto height, not 100%: quick.js sizes the window to this element, so the
+   window grows and shrinks with the suggestion list instead of reserving empty
+   space for one that usually isn't showing. */
+.q { box-sizing: border-box; padding: 18px 18px 14px;
+  display: flex; flex-direction: column; gap: 12px; }
+
+#q-input {
+  width: 100%; box-sizing: border-box; padding: 13px 14px; font-size: 16px;
+  font-family: inherit; color: #2d2822; background: #faf6ee;
+  border: 1px solid rgba(90,70,40,.22); border-radius: 11px; outline: none;
+}
+#q-input:focus { border-color: #bf5b34; box-shadow: 0 0 0 3px rgba(191,91,52,.13); }
+#q-input::placeholder { color: #b3a88f; }
+
+.q-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.q-hint { color: #b3a88f; font-size: 11.5px; flex: none; padding-bottom: 2px; }
+.q-hint.err { color: #bf5b34; }
+
+.q-preview { display: flex; align-items: baseline; gap: 9px; min-height: 30px; min-width: 0; }
+.q-preview .dur { font-family: 'Instrument Serif', serif; font-size: 30px; line-height: 1; color: #2d2822; }
+.q-preview .proj { color: #6b5f4d; font-size: 12.5px; white-space: nowrap; }
+.q-preview .pill {
+  background: #efe6d4; color: #8a5a2a; border-radius: 999px;
+  padding: 2px 8px; font-size: 11.5px; white-space: nowrap;
+}
+.q-preview .muted { color: #b3a88f; font-size: 12.5px; }
+
+/* The app's autocomplete overlays the page because it has to; here it sits in
+   the flow and pushes the footer down, since the window resizes to match. No
+   overlap to manage, and nothing can fall outside the frame. */
+.ac {
+  margin-top: 6px; background: #fff;
+  border: 1px solid rgba(90,70,40,.18); border-radius: 11px;
+  box-shadow: 0 12px 34px rgba(60,40,20,.16); overflow: hidden; font-size: 13.5px;
+}
+.ac-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 13px; cursor: pointer; }
+.ac-item.hl { background: #f6efe2; }
+.ac-item .uses { color: #b3a88f; font-size: 11.5px; }
+.ac-create {
+  display: flex; align-items: center; gap: 8px; padding: 10px 13px; cursor: pointer;
+  border-top: 1px solid rgba(90,70,40,.1); color: #8a5a2a; background: #fdfaf3;
+}
+.ac-create.hl { background: #faf3e8; }
+.ac-create .ac-note { color: #b3a88f; font-size: 11.5px; }
+.ac-create .plus {
+  width: 17px; height: 17px; border-radius: 5px; background: #efe6d4; color: #8a5a2a;
+  display: grid; place-items: center; font-size: 13px; line-height: 1;
+}

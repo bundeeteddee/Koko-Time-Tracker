@@ -6,7 +6,13 @@
 // shell. Kept free of any database access so it can be unit-tested directly and
 // so callers stay in charge of resolving the project name they get back.
 
-const { parseDur } = require('../public/duration.js');
+// Loaded as a plain script in the browser (public/quick.html) and required by
+// the server and tests — hence the guarded export at the bottom, same as
+// duration.js. The popup's live preview is then the server's own parse, not a
+// second implementation that can drift from it.
+if (typeof require !== 'undefined' && typeof module !== 'undefined') {
+  var { parseDur } = require('./duration.js');
+}
 
 // The leading duration span, longest form first so "1h30m" isn't cut short at
 // "1h". Anchored and required to end on a word boundary so the scanner can't
@@ -70,4 +76,4 @@ function resolveProject(projects, token) {
   return { error: `unknown project "${token}"` };
 }
 
-module.exports = { parseQuick, resolveProject };
+if (typeof module !== 'undefined' && module.exports) module.exports = { parseQuick, resolveProject };
