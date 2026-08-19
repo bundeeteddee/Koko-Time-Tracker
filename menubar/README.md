@@ -15,18 +15,30 @@ plugin metadata both apps share, so [xbar](https://xbarapp.com) should work too
 — untested.
 
 ```bash
-brew install --cask swiftbar
+brew install --cask swiftbar     # if you don't have it
+bash scripts/install-swiftbar.sh # sets it up and starts it
+bash scripts/uninstall-swiftbar.sh
 ```
 
-On first launch SwiftBar asks for a plugin folder. Either point it at this
-`menubar/` directory, or keep your own folder and symlink the plugin into it:
+The clock icon and today's total appear in the menu bar on the right. If
+nothing shows up, use **Refresh all** from SwiftBar's own menu.
 
-```bash
-ln -s "$PWD/menubar/koko.1m.sh" ~/path-to-your-plugin-folder/
-```
+The installer doesn't point SwiftBar at this folder — it gives SwiftBar a
+folder of its own (`~/SwiftBarPlugins`) holding a one-line wrapper that runs the
+plugin from the repo, so `git pull` is enough to update it. Two reasons it has
+to work that way, both of which bite if you set it up by hand:
 
-Then **Refresh all** from the SwiftBar menu. The `1m` in the filename is the
-refresh interval — rename it to `koko.5m.sh` if once a minute feels eager.
+- **SwiftBar runs everything in its plugin folder**, and sets the executable bit
+  while it's at it. Aimed at `menubar/`, it will happily try to execute this
+  README.
+- **SwiftBar runs plugins through a login shell** unless the plugin says
+  `<swiftbar.runInBash>false</swiftbar.runInBash>`. A login shell sources your
+  shell profile first, and *anything your profile prints to stdout* arrives
+  ahead of the plugin's own output — so a stray `echo` in `~/.bash_profile`
+  becomes your menu bar item. The wrapper carries that flag.
+
+The `1m` in the filename is the refresh interval — rename both the wrapper and
+the plugin to `koko.5m.sh` if once a minute feels eager.
 
 Point it at a different port with a `KOKO_URL` environment variable
 (`KOKO_URL=http://localhost:5000`); it defaults to `http://localhost:4321`.

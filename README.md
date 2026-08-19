@@ -99,9 +99,14 @@ does the whole entry:
 1:30 fixed the sheets sync #bugfix @Koko
 ```
 
-Setup and syntax: [`menubar/README.md`](menubar/README.md). The parsing is
-server-side (`POST /api/quick`), so a Shortcut or a plain `curl` works just as
-well as the plugin.
+```bash
+brew install --cask swiftbar
+bash scripts/install-swiftbar.sh
+```
+
+Setup notes and the full syntax: [`menubar/README.md`](menubar/README.md). The
+parsing is server-side (`POST /api/quick`), so a Shortcut or a plain `curl`
+works just as well as the plugin.
 
 ## Reminders
 

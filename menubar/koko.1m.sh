@@ -7,6 +7,12 @@
 # <xbar.desc>Shows today's logged time and logs new entries from the status bar.</xbar.desc>
 # <xbar.dependencies>Koko running on localhost:4321</xbar.dependencies>
 #
+# Run the script directly rather than through SwiftBar's login-shell wrapper.
+# A login shell sources the user's profile first, and anything that profile
+# prints lands on stdout ahead of this plugin's own output — which SwiftBar
+# then shows as the status item.
+# <swiftbar.runInBash>false</swiftbar.runInBash>
+#
 # Deliberately dumb: the server does all the parsing (see src/quick-parse.js), so
 # this file only has to move one line of text. That means no jq, no node, no
 # python — just curl and the tools in /usr/bin, which is all SwiftBar guarantees

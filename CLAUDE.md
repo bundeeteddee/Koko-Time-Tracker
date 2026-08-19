@@ -22,7 +22,12 @@ are logged after the fact (duration + description) — there is no timer.
 - `menubar/koko.1m.sh` — SwiftBar/xbar plugin: today's total in the macOS
   status bar plus a one-line log dialog. Deliberately dumb (curl + sed only,
   no jq/node/python) because `POST /api/quick` does the parsing
-  (`src/quick-parse.js`)
+  (`src/quick-parse.js`). Installed via `scripts/install-swiftbar.sh`, which
+  writes a wrapper into `~/SwiftBarPlugins` rather than pointing SwiftBar at
+  `menubar/` — SwiftBar executes *every* file in its plugin folder (README
+  included) and runs plugins through a login shell unless they declare
+  `<swiftbar.runInBash>false</swiftbar.runInBash>`, in which case anything the
+  user's shell profile prints becomes the status bar item
 - `design/PersonalTimeKeeping-App.dc.html` — the original design mock the UI
   is translated from
 
