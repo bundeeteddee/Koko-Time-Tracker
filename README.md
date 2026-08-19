@@ -91,22 +91,32 @@ Logs go to `~/Library/Logs/TimeKeeping/` (launchd can't write inside
 
 ## Menu bar quick logging (macOS)
 
-For logging without going near a browser window, `menubar/koko.1m.sh` puts
-today's total in the status bar with a **Log entry…** dialog behind it. One line
-does the whole entry:
+Logging shouldn't mean hunting for a browser window. TimeKeeping can sit in the
+macOS status bar — the icon area on the right — showing today's total, in the
+accent colour while a workday is still short of target. Behind it is a small
+window with one field, where the whole entry goes on a single line:
 
-```
-1:30 fixed the sheets sync #bugfix @Koko
-```
+![The quick-log window: one text field, tag suggestions, and a live preview of the duration, project and tags](docs/screenshots/quick-log.png)
+
+Typing `#` suggests your existing tags and offers to create the one you're
+typing; `@` suggests projects. The corner previews exactly what will be
+recorded. **⏎** takes the highlighted suggestion while the list is up and logs
+the entry when it isn't; **esc** closes the window.
 
 ```bash
 brew install --cask swiftbar
-bash scripts/install-swiftbar.sh
+bash scripts/install-swiftbar.sh    # and uninstall-swiftbar.sh to remove
 ```
 
-Setup notes and the full syntax: [`menubar/README.md`](menubar/README.md). The
-parsing is server-side (`POST /api/quick`), so a Shortcut or a plain `curl`
-works just as well as the plugin.
+Setup notes and the full syntax: [`menubar/README.md`](menubar/README.md).
+
+The parsing all happens server-side (`POST /api/quick`), so the menu bar is
+just one way in — a Shortcut, or a plain `curl`, logs time just as well:
+
+```bash
+curl --data-urlencode "text=1:30 refactor the billing table #frontend" \
+  localhost:4321/api/quick
+```
 
 ## Reminders
 

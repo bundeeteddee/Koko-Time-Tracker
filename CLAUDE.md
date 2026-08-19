@@ -7,17 +7,23 @@ are logged after the fact (duration + description) — there is no timer.
 
 ## Architecture
 
-- `server.js` — Express bound to 127.0.0.1:4321
+- `server.js` — Express bound to 127.0.0.1:4321. Parses JSON *and* form
+  bodies (shell clients post with `curl --data-urlencode`, which sidesteps
+  JSON-escaping user text), and serves static files with `extensions: ['html']`
+  so `/quick` resolves to `quick.html`
 - `src/db.js` — built-in `node:sqlite` (NOT better-sqlite3; zero native deps),
   migrations via `PRAGMA user_version`, schema: projects / tags / entries /
   entry_tags / settings / sync_state
-- `src/routes.js` + `src/reports.js` — JSON API under `/api`
+- `src/routes.js` + `src/reports.js` — JSON API under `/api`. `POST /api/quick`
+  logs a whole entry from one line of text; it shares the one write path
+  (`insertEntry`) with `POST /api/entries`
 - `src/reminders.js` — in-process 60s scheduler; under-logged-day reminders via
   macOS notifications (osascript)
 - `src/sheets-sync.js` — Google Sheets mirror: debounced full-tab rewrite using
   a service account, with startup catch-up, hourly re-mirror, and backoff retry
 - `public/` — no-build vanilla-JS SPA (`index.html` is a static skeleton,
-  `app.js` renders into it, Chart.js from CDN). No framework, no bundler —
+  `app.js` renders into it, Chart.js and Instrument Serif vendored under
+  `public/vendor/` so the app works offline). No framework, no bundler —
   keep it that way. `quick.html`/`quick.js`/`quick.css` are a separate
   single-field page opened from the menu bar as a Chrome app window; it sizes
   the window to its own content because Chrome ignores `--window-size` when
@@ -29,7 +35,7 @@ are logged after the fact (duration + description) — there is no timer.
 - `menubar/koko.1m.sh` — SwiftBar/xbar plugin: today's total in the macOS
   status bar plus a one-line log dialog. Deliberately dumb (curl + sed only,
   no jq/node/python) because `POST /api/quick` does the parsing
-  (`src/quick-parse.js`). Installed via `scripts/install-swiftbar.sh`, which
+  (`public/quick-parse.js`). Installed via `scripts/install-swiftbar.sh`, which
   writes a wrapper into `~/SwiftBarPlugins` rather than pointing SwiftBar at
   `menubar/` — SwiftBar executes *every* file in its plugin folder (README
   included) and runs plugins through a login shell unless they declare
@@ -73,4 +79,15 @@ are logged after the fact (duration + description) — there is no timer.
 - Verify UI changes by driving the real app headlessly (e.g. puppeteer-core
   with system Chrome against localhost:4321), and exercise both keyboard and
   mouse paths — hover-triggered re-renders have previously broken mouse
-  interaction while keyboard paths kept passing.
+  interaction while keyboard paths kept passing. Install the driver outside the
+  repo (`npm install --prefix <scratch> puppeteer-core`) — the project ships
+  with no devDependencies and it should stay that way.
+- Drive it against a throwaway copy of the app, not the real one: `src/db.js`
+  resolves `data/` from `__dirname/..`, so copying `server.js`/`src`/`public`
+  to a scratch directory with an empty `data/` and running it on another port
+  gives a disposable database. Symlinking instead of copying doesn't work —
+  `__dirname` resolves through the symlink back to the real `data/`.
+- Menu bar changes can't be verified from a script's stdout alone; SwiftBar may
+  never run it, or prepend something. Screenshot the real thing:
+  `screencapture -x -R"<x>,0,<w>,26" out.png` (coordinates are points, so half
+  the pixel width on Retina).
