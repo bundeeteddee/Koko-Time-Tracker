@@ -255,9 +255,8 @@ async function init() {
     acceptAc(Number(el.dataset.i));
   });
 
-  sizeWindow();
-  input.focus();
-
+  // Loaded before focus: it's a localhost round trip, and the alternative is a
+  // window where the field accepts typing but has nothing to suggest yet.
   try {
     const st = await (await fetch('/api/status')).json();
     S.projects = st.projects || [];
@@ -265,6 +264,12 @@ async function init() {
   } catch (e) {
     setHint('Koko is not responding', true);
   }
+
+  sizeWindow();
+  input.focus();
+  // Instrument Serif lands after first paint and changes the preview's height,
+  // so size once more when the fonts have settled.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeWindow);
 }
 
 document.addEventListener('DOMContentLoaded', init);

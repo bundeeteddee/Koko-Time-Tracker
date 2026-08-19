@@ -21,7 +21,8 @@ are logged after the fact (duration + description) — there is no timer.
   keep it that way. `quick.html`/`quick.js`/`quick.css` are a separate
   single-field page opened from the menu bar as a Chrome app window; it sizes
   the window to its own content because Chrome ignores `--window-size` when
-  it's already running
+  it's already running, and re-sizes on `document.fonts.ready` because
+  Instrument Serif lands after first paint
 - `public/quick-parse.js` — the one-line quick-entry parser, dual-loaded like
   `duration.js`: required by `src/routes.js` for `POST /api/quick` and loaded
   as a plain script by the popup, so its live preview is the server's own parse

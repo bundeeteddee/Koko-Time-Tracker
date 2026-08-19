@@ -63,6 +63,12 @@ The window is a Chrome app window, sized by the page itself. Without Chrome the
 plugin falls back to a plain AppleScript dialog, which takes exactly the same
 one-line syntax but has no suggestions.
 
+The window closing is the confirmation that the entry was logged — the total in
+the status bar catches up on the plugin's next refresh, within a minute. The
+page could refresh it immediately by opening `swiftbar://refreshallplugins`,
+but Chrome puts an "Open SwiftBar?" permission dialog in front of that, which
+is a worse trade than a total that's briefly a minute behind.
+
 - **Duration** — anything the app's own duration box takes: `90`, `90m`, `2h`,
   `1:30`, `1h30`, `1.5h` (or `1,5h`). A bare number is minutes.
 - **`#tags`** — stay in the description; they're extracted exactly as they are
