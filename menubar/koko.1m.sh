@@ -121,6 +121,11 @@ fi
 
 entries=$(curl -s -m 3 "$BASE/api/entries?from=$date_today&to=$date_today")
 
+# A long day would otherwise push the menu off the screen, so cap the list — but
+# say how many are hidden rather than truncating silently.
+SHOWN=8
+count=$(printf '%s' "$entries" | tr ',' '\n' | grep -c '"entry_date"')
+
 # One line per entry. Splitting on the record boundary and anchoring each field
 # to the one that follows it keeps descriptions containing commas or quotes intact.
 # The literal backslash-newline is deliberate: BSD sed writes a plain "n" for
@@ -132,13 +137,17 @@ printf '%s\n' "$entries" \
   | sed 's/^\[//; s/\]$//; s/},{/}\
 {/g' \
   | sed -n 's/^{.*"minutes":\([0-9]*\),.*"project_name":\(.*\),"project_color".*"description":"\(.*\)","updated_at".*$/\1\t\2\t\3/p' \
-  | head -8 | while IFS=$'\t' read -r mins project desc; do
+  | head -"$SHOWN" | while IFS=$'\t' read -r mins project desc; do
   project=$(printf '%s' "$project" | sed 's/^"//; s/"$//')
   [ "$project" = "null" ] && project="No project"
   desc=$(printf '%s' "$desc" | unescape)
   [ -z "$desc" ] && desc="(no description)"
   echo "$(fmt_entry "$mins")  $desc | length=45 tooltip=\"$project\""
 done
+
+if [ "$count" -gt "$SHOWN" ]; then
+  echo "… and $((count - SHOWN)) more today | color=$MUTED shell=\"$SELF\" param1=open terminal=false"
+fi
 
 echo "---"
 echo "Open reports… | shell=\"$SELF\" param1=open terminal=false"

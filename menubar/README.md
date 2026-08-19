@@ -10,8 +10,9 @@ link to the full app.
 
 ## Install
 
-`koko.1m.sh` is a [SwiftBar](https://swiftbar.app) plugin (it works with
-[xbar](https://xbarapp.com) too):
+`koko.1m.sh` is a [SwiftBar](https://swiftbar.app) plugin. It uses only the
+plugin metadata both apps share, so [xbar](https://xbarapp.com) should work too
+— untested.
 
 ```bash
 brew install --cask swiftbar
@@ -39,7 +40,7 @@ One line, duration first:
 ```
 
 - **Duration** — anything the app's own duration box takes: `90`, `90m`, `2h`,
-  `1:30`, `1h30`, `1.5h`. A bare number is minutes.
+  `1:30`, `1h30`, `1.5h` (or `1,5h`). A bare number is minutes.
 - **`#tags`** — stay in the description; they're extracted exactly as they are
   when you type them into the web form.
 - **`@project`** — case, spaces and punctuation don't matter (`@koko-time`
@@ -49,6 +50,13 @@ One line, duration first:
 
 Everything left over is the description. If the duration is missing or the
 project is ambiguous, you get a notification saying so and nothing is logged.
+
+Quick entries always land on **today**. There's nowhere on one line to put a
+date without making the syntax guess at your intent, so use the web form to
+backdate — the endpoint takes an `entry_date` if you're scripting against it.
+
+The menu lists the day's first eight entries and then says how many it's
+hiding; the full day is always in the app.
 
 ## Without SwiftBar
 

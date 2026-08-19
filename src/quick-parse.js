@@ -18,7 +18,7 @@ const LEAD_DUR = new RegExp(
   + '|\\d*\\.\\d+\\s*(?:h|hrs?|hours?)?'                   // 1.5, 1.5h
   + '|\\d+\\s*(?:h|hrs?|hours?|m|mins?|minutes?)'          // 2h, 90m
   + '|\\d+'                                                // 90 (bare = minutes)
-  + ')(?=\\s|$)', 'i');
+  + ')(?=[\\s,]|$)', 'i');
 
 // A project mention, either @Name or @"Two Words". Must start the line or
 // follow whitespace so an email address in the description stays a description.
@@ -28,12 +28,17 @@ function parseQuick(text) {
   const raw = String(text == null ? '' : text).trim();
   if (!raw) return { error: 'text is empty' };
 
-  const d = raw.match(LEAD_DUR);
+  // A comma decimal on the leading number only ("1,5h" → "1.5h"). Anchored so a
+  // description that happens to contain "1,5" further along is left alone.
+  const normalized = raw.replace(/^(\s*\d+),(\d)/, '$1.$2');
+
+  const d = normalized.match(LEAD_DUR);
   if (!d) return { error: 'no duration found — start with one, e.g. "1:30 fixed the sync"' };
   const minutes = parseDur(d[1]);
   if (!(minutes > 0)) return { error: `could not read "${d[1].trim()}" as a duration` };
 
-  let rest = raw.slice(d[0].length);
+  // Drops the separator when the duration was written "90, wrote emails".
+  let rest = normalized.slice(d[0].length).replace(/^[\s,]+/, '');
   let project = null;
   const p = rest.match(PROJECT);
   if (p) {

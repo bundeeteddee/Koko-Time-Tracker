@@ -32,6 +32,14 @@ splits('a bare leading number is minutes, and only the number is consumed', [
   ['15m estimated the 2h migration', { minutes: 15, description: 'estimated the 2h migration', project: null }],
 ]);
 
+splits('accepts a comma decimal and a comma after the duration', [
+  ['1,5h deep work', { minutes: 90, description: 'deep work', project: null }],
+  ['1,5 deep work', { minutes: 90, description: 'deep work', project: null }],
+  ['90, wrote emails', { minutes: 90, description: 'wrote emails', project: null }],
+  // Only the leading number is normalised — a comma decimal in prose survives.
+  ['30m reviewed the 1,5 page draft', { minutes: 30, description: 'reviewed the 1,5 page draft', project: null }],
+]);
+
 splits('pulls out an @project mention from anywhere in the line', [
   ['1:30 sync work @Koko', { minutes: 90, description: 'sync work', project: 'Koko' }],
   ['1:30 @Koko sync work', { minutes: 90, description: 'sync work', project: 'Koko' }],
