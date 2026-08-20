@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.timekeeping.backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE__</string>
+    <string>__PROJECT__/scripts/backup.js</string>
+    <string>__DEST__</string>
+  </array>
+  <!-- Same rule as the server agent: no WorkingDirectory, and logs live in
+       ~/Library/Logs — launchd cannot touch TCC-protected folders like
+       ~/Documents, and fails with EX_CONFIG if asked to. -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>22</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__LOGS__/backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>__LOGS__/backup-error.log</string>
+</dict>
+</plist>

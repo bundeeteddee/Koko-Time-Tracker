@@ -9,10 +9,10 @@ you did and how long it took: `45m writing test cases for the payment retry
 flow #tests`. That's the whole workflow. TimeKeeping turns those little notes
 into a clear picture of where your days, months, and years actually go.
 
-It runs entirely on your own machine as a small local web app
-([http://localhost:4321](http://localhost:4321)). Your data lives in a SQLite
-file in the project folder. Nothing is sent anywhere unless you opt into the
-Google Sheets backup.
+It runs entirely on your own machine as a small local web app. Your data lives
+in a SQLite file in the project folder. Nothing is sent anywhere unless you opt
+into the Google Sheets backup — and that's just an ordinary Google Sheet in your
+own Google account, free, and yours to delete whenever.
 
 ## How it works
 
@@ -158,12 +158,12 @@ curl -X POST localhost:4321/api/dev/notify
 
 ## Google Sheets backup (optional)
 
-A one-way live mirror of your data into a Google Sheet — useful as an
-off-machine backup or for building your own pivot tables. The sheet is
-disposable: SQLite stays the source of truth, and every sync is a full
-rewrite, so edits or deletions in the sheet are simply overwritten. It syncs
-60 seconds after any change, on startup, and hourly; failures retry with
-backoff and never block the app.
+A one-way live mirror of your data into a normal Google Sheet in your own
+Google account — free, and useful as an off-machine backup or for building your
+own pivot tables. The sheet is disposable: SQLite stays the source of truth,
+and every sync is a full rewrite, so edits or deletions in the sheet are simply
+overwritten. It syncs 60 seconds after any change, on startup, and hourly;
+failures retry with backoff and never block the app.
 
 One-time setup:
 
@@ -181,6 +181,48 @@ One-time setup:
 
 ## Your data
 
-Everything lives in `data/timekeeping.db` — one SQLite file you can copy,
-back up, or query directly. No accounts, no cloud, no telemetry. The server
-binds to `127.0.0.1` only, so nothing on your network can reach it.
+Everything lives in `data/` — a SQLite database you can query directly, or copy
+out as a snapshot (below). No accounts, no cloud, no telemetry. The server binds
+to `127.0.0.1` only, so nothing on your network can reach it.
+
+### Backing it up to Google Drive (or any sync folder)
+
+Don't point Drive at `data/` itself. The database runs in WAL mode, so it is
+really three files — `timekeeping.db`, `-wal`, `-shm` — that only mean anything
+together, and a sync client uploads them as independent objects at independent
+moments. That can pair a `.db` from one instant with a `-wal` from another,
+which restores as a *corrupt* database rather than a stale one. (Syncing only
+`timekeeping.db` is no better: recent writes may still live in the `-wal`.)
+
+Snapshot instead. `scripts/backup.js` writes one self-contained file, with no
+sidecars, and is safe to run while the app is running:
+
+```bash
+npm run backup -- ~/"Google Drive/My Drive/TimeKeeping Backups"
+```
+
+For a daily snapshot, install it as a LaunchAgent — at login and again at
+22:00, keeping the last 14 days:
+
+```bash
+scripts/install-backup.sh              # defaults to your Google Drive
+scripts/install-backup.sh "<folder>"   # or anywhere else
+scripts/uninstall-backup.sh
+```
+
+Logs go to `~/Library/Logs/TimeKeeping/backup.log`. Set
+`TIMEKEEPING_BACKUP_KEEP` to change how many snapshots are kept.
+
+**To restore:** stop the app, **delete `data/timekeeping.db-wal` and
+`data/timekeeping.db-shm`**, then copy the snapshot to `data/timekeeping.db`.
+Leaving the old sidecars beside a restored database is its own way to corrupt
+it. Stop and start it however you run it — the two `launchctl` lines below apply
+if you installed it as a LaunchAgent; otherwise just quit `npm start` and
+restart it.
+
+```bash
+launchctl bootout "gui/$UID/com.timekeeping.app"
+rm -f data/timekeeping.db-wal data/timekeeping.db-shm
+cp "<backups>/timekeeping-2026-08-20.db" data/timekeeping.db
+launchctl bootstrap "gui/$UID" ~/Library/LaunchAgents/com.timekeeping.app.plist
+```

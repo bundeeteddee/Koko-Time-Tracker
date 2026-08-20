@@ -41,6 +41,13 @@ are logged after the fact (duration + description) — there is no timer.
   included) and runs plugins through a login shell unless they declare
   `<swiftbar.runInBash>false</swiftbar.runInBash>`, in which case anything the
   user's shell profile prints becomes the status bar item
+- `scripts/backup.js` — `VACUUM INTO` snapshot of the database into a sync
+  folder (Google Drive by default), installed as a second LaunchAgent
+  (`com.timekeeping.backup`) by `scripts/install-backup.sh`. It exists because
+  `data/` must never be cloud-synced directly: WAL mode makes the database
+  three files, and a sync client uploads them at independent moments, which can
+  restore as a corrupt database. Restoring a snapshot means deleting the old
+  `-wal`/`-shm` first
 - `design/PersonalTimeKeeping-App.dc.html` — the original design mock the UI
   is translated from
 
