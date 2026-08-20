@@ -48,8 +48,10 @@ are logged after the fact (duration + description) — there is no timer.
 
 - **Data lives in `data/`** (gitignored): `timekeeping.db` plus
   `service-account.json` (Google credentials). Never commit it. `npm run seed`
-  wipes entries and projects — it is for development against a throwaway
-  database only.
+  wipes entries, projects and tags — it is for development against a throwaway
+  database only. It is also the demo world the README's screenshots and
+  `docs/tour.gif` are recorded from, so keep its projects/descriptions
+  presentable.
 - **Design fidelity**: new UI should reuse the mock's tokens — card `#f4efe6`,
   panel `#faf6ee`, accent `#bf5b34`, ink `#2d2822`, tag pills
   `#efe6d4`/`#8a5a2a`, Instrument Serif for large numerals.
@@ -91,3 +93,9 @@ are logged after the fact (duration + description) — there is no timer.
   never run it, or prepend something. Screenshot the real thing:
   `screencapture -x -R"<x>,0,<w>,26" out.png` (coordinates are points, so half
   the pixel width on Retina).
+- README artwork is regenerated, not hand-captured: `scripts/tour/record.js`
+  drives a throwaway copy of the app and writes one frame per visual state with
+  the duration it should hold, `build-gif.sh` turns those into `docs/tour.gif`,
+  and `shots.js` refreshes `docs/screenshots/`. Read `record.js`'s header before
+  running any of them — it logs real entries, so it must never point at the real
+  app, and the demo database needs reseeding between takes.

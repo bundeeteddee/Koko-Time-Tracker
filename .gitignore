@@ -2,3 +2,7 @@ node_modules/
 data/
 logs/
 .DS_Store
+
+# generated while recording docs/tour.gif
+scripts/tour/frames/
+scripts/tour/shots/
